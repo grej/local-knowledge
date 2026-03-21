@@ -13,7 +13,6 @@ source:
 
 build:
   number: 0
-  noarch: python
   script:
     - ${{ PYTHON }} -m pip install packages/core --no-deps --no-build-isolation -vv
     - ${{ PYTHON }} -m pip install packages/cli --no-deps --no-build-isolation -vv
