@@ -1,0 +1,55 @@
+schema_version: 1
+
+context:
+  name: local-knowledge
+  version: ${{ env.get("PKG_VERSION") }}
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+  noarch: python
+  script:
+    - ${{ PYTHON }} -m pip install packages/core --no-deps --no-build-isolation -vv
+    - ${{ PYTHON }} -m pip install packages/cli --no-deps --no-build-isolation -vv
+    - ${{ PYTHON }} -m pip install packages/ui --no-deps --no-build-isolation -vv
+    - ${{ PYTHON }} -m pip install packages/mcp --no-deps --no-build-isolation -vv
+
+requirements:
+  host:
+    - python >=3.12
+    - pip
+    - hatchling
+  run:
+    - python >=3.12
+    - httpx
+    - numpy
+    - click >=8.1
+    - rich >=13.0
+    - fastapi >=0.115
+    - uvicorn >=0.34
+    - mcp >=1.26
+
+tests:
+  - python:
+      imports:
+        - localknowledge
+        - lk
+        - lk_ui
+        - lk_mcp
+      pip_check: true
+  - script:
+      - lk --help
+      - lk-mcp --help
+
+about:
+  homepage: https://github.com/grej/local-knowledge
+  repository: https://github.com/grej/local-knowledge
+  license: MIT
+  license_file: LICENSE
+  summary: Local-first personal knowledge engine with hybrid search and MCP server

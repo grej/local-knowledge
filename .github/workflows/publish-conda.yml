@@ -1,0 +1,33 @@
+name: Publish to Anaconda.org
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
+
+      - name: Install rattler-build
+        run: pixi global install rattler-build
+
+      - name: Extract version from tag
+        run: echo "PKG_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Build conda package
+        run: rattler-build build --recipe recipe/recipe.yaml --output-dir dist/conda
+
+      - name: Upload to anaconda.org
+        run: |
+          find dist/conda -name "*.conda" -exec rattler-build upload anaconda \
+            --owner gjennings --api-key "$ANACONDA_API_KEY" --channel main {} +
+        env:
+          ANACONDA_API_KEY: ${{ secrets.ANACONDA_TOKEN }}

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Knowledge</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Local Knowledge</h1>
+    <div id="stats-bar"></div>
+  </header>
+
+  <main>
+    <section id="search-section">
+      <form id="search-form">
+        <input type="text" id="search-input" placeholder="Search documents..." autocomplete="off">
+        <select id="search-mode">
+          <option value="hybrid">Hybrid</option>
+          <option value="semantic">Semantic</option>
+          <option value="fts">FTS</option>
+        </select>
+        <select id="project-filter">
+          <option value="">All projects</option>
+        </select>
+        <label class="toggle"><input type="checkbox" id="chunks-toggle"> Chunks</label>
+        <button type="submit">Search</button>
+        <button type="button" id="browse-btn" class="secondary">Browse All</button>
+      </form>
+    </section>
+
+    <div id="content-area">
+      <section id="results-panel">
+        <div id="results-list"></div>
+      </section>
+
+      <section id="detail-panel" class="hidden">
+        <button id="close-detail" class="close-btn">&times;</button>
+        <div id="detail-content"></div>
+      </section>
+    </div>
+
+    <section id="add-section">
+      <details>
+        <summary>Add Document</summary>
+        <form id="add-form">
+          <input type="text" id="add-title" placeholder="Title (optional)">
+          <select id="add-type">
+            <option value="note">Note</option>
+            <option value="article">Article</option>
+            <option value="snippet">Snippet</option>
+          </select>
+          <textarea id="add-text" rows="5" placeholder="Paste or type text content..."></textarea>
+          <button type="submit">Add</button>
+        </form>
+      </details>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

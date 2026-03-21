@@ -1,0 +1,47 @@
+[workspace]
+name = "local-knowledge"
+channels = [
+  "https://repo.anaconda.com/pkgs/main",
+  "https://repo.anaconda.com/pkgs/r",
+  "https://repo.anaconda.com/pkgs/msys2",
+  "conda-forge",
+]
+channel-priority = "strict"
+platforms = ["osx-arm64"]
+
+[system-requirements]
+macos = "15.0"
+
+[dependencies]
+python = "3.12.*"
+pip = "*"
+mcp = "*"
+httpx = "*"
+numpy = "*"
+click = ">=8.1"
+rich = ">=13.0"
+fastapi = ">=0.115"
+uvicorn = ">=0.34"
+
+[pypi-dependencies]
+localknowledge-core = { path = "packages/core", editable = true }
+readcast-v2 = { path = "packages/readcast", editable = true }
+lk-cli = { path = "packages/cli", editable = true }
+lk-ui = { path = "packages/ui", editable = true }
+lk-mcp = { path = "packages/mcp", editable = true }
+
+[feature.dev.pypi-dependencies]
+pytest = "*"
+ruff = "*"
+mlx-embeddings = { git = "https://github.com/Blaizzy/mlx-embeddings.git" }
+
+[tasks]
+test = { cmd = "pytest packages/core/tests packages/readcast/tests packages/cli/tests packages/mcp/tests -q -m 'not slow'" }
+"test:slow" = { cmd = "pytest packages/core/tests -q -m slow" }
+lint = { cmd = "ruff check ." }
+lk = "lk"
+ui = "lk-ui"
+mcp = "lk-mcp"
+
+[environments]
+default = { features = ["dev"], solve-group = "default" }
