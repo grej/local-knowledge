@@ -51,6 +51,7 @@ class KnowledgeService:
         text: str,
         title: str | None = None,
         source_type: str = "note",
+        source_product: str = "lk",
         source_uri: str | None = None,
         metadata: dict | None = None,
         source_conversation: str | None = None,
@@ -67,7 +68,7 @@ class KnowledgeService:
         doc = self.docs.create(
             title=title,
             source_type=source_type,
-            source_product="lk",
+            source_product=source_product,
             content=text,
             source_uri=source_uri,
             metadata=meta or None,
@@ -98,9 +99,9 @@ class KnowledgeService:
         return self.docs.get(doc_id)
 
     def list_documents(
-        self, source_type: str | None = None, limit: int = 50
+        self, source_type: str | None = None, source_product: str | None = None, limit: int = 50
     ) -> list[Document]:
-        return self.docs.list(source_type=source_type, limit=limit)
+        return self.docs.list(source_type=source_type, source_product=source_product, limit=limit)
 
     def delete_document(self, doc_id: str) -> bool:
         return self.docs.delete(doc_id)
