@@ -19,6 +19,7 @@ mcp = "*"
 httpx = "*"
 numpy = "*"
 click = ">=8.1"
+rumps = ">=0.4.0"
 rich = ">=13.0"
 fastapi = ">=0.115"
 uvicorn = ">=0.34"
@@ -29,6 +30,7 @@ readcast-v2 = { path = "packages/readcast", editable = true }
 lk-cli = { path = "packages/cli", editable = true }
 lk-ui = { path = "packages/ui", editable = true }
 lk-mcp = { path = "packages/mcp", editable = true }
+lk-desktop = { path = "packages/desktop", editable = true }
 
 [feature.dev.pypi-dependencies]
 pytest = "*"
@@ -42,6 +44,7 @@ lint = { cmd = "ruff check ." }
 lk = "lk"
 ui = "lk-ui"
 mcp = "lk-mcp"
+desktop = "lk-desktop"
 
 [environments]
 default = { features = ["dev"], solve-group = "default" }
