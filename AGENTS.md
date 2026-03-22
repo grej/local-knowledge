@@ -15,7 +15,7 @@ Primary entry point is `lk-desktop` (menu bar app that manages all services).
 | `localknowledge-core` | `packages/core/` | (library) | Database, embeddings, search, config, migrations |
 | `lk-cli` | `packages/cli/` | `lk` | Click CLI for all operations |
 | `lk-ui` | `packages/ui/` | `lk-ui` | FastAPI web UI on port 8321 |
-| `lk-mcp` | `packages/mcp/` | `lk-mcp` | MCP server (SSE on port 8322, `--stdio` flag for subprocess mode) |
+| `lk-mcp` | `packages/mcp/` | `lk-mcp` | MCP server (stdio for Claude Desktop, SSE on port 8322 for Claude Code) |
 | `lk-desktop` | `packages/desktop/` | `lk-desktop` | macOS menu bar app + service supervisor |
 | `readcast-v2` | `packages/readcast/` | (library) | Adapter mapping readcast's article API onto core |
 
@@ -42,7 +42,7 @@ pixi run lint         # ruff check .
 - **Database**: SQLite + WAL mode, migration system in `packages/core/src/localknowledge/migrations/`
 - **Search**: Hybrid FTS5 + dense vector embeddings, fused via Reciprocal Rank Fusion
 - **Embeddings**: `packages/core/src/localknowledge/embeddings/` — MLXEmbedder (Apple Silicon), chunking, indexing
-- **MCP server**: FastMCP with SSE transport (default) or stdio (`--stdio`). Tools defined in `packages/mcp/src/lk_mcp/tools.py`
+- **MCP server**: FastMCP with two transports. SSE on port 8322 is the default (managed by lk-desktop, used by Claude Code). `--stdio` flag for Claude Desktop which spawns its own subprocess. Both share the same SQLite database. Tools defined in `packages/mcp/src/lk_mcp/tools.py`
 
 ## Build and release
 

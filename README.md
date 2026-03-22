@@ -34,20 +34,36 @@ To start on login: click the menu bar icon → **Start on Login**.
 | `lk-ui` | Web UI at `http://127.0.0.1:8321` — browse and search your knowledge base |
 | `lk-mcp` | MCP server — gives Claude (and other LLM tools) access to your knowledge base |
 
-## MCP server for Claude Desktop
+## MCP server for Claude
 
-The MCP server runs on `http://localhost:8322` (started automatically by `lk-desktop`).
-Add this to your `claude_desktop_config.json` (Settings → Developer → Edit Config):
+### Claude Desktop
+
+Claude Desktop spawns MCP servers as subprocesses (stdio only). Add this to
+`~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "local-knowledge": {
-      "url": "http://localhost:8322/sse"
+      "command": "<HOME>/.pixi/envs/local-knowledge/bin/lk-mcp",
+      "args": ["--stdio"]
     }
   }
 }
 ```
+
+Replace `<HOME>` with your home directory (e.g. `/Users/yourname`). Restart Claude Desktop
+after editing.
+
+### Claude Code
+
+`lk-desktop` also runs an SSE server on port 8322 for clients that support HTTP connections:
+
+```bash
+claude mcp add local-knowledge http://localhost:8322/sse
+```
+
+### Available tools
 
 The MCP server exposes these tools to Claude:
 
@@ -75,7 +91,7 @@ packages/
 ├── core/       localknowledge-core  — database, embeddings, search engine
 ├── cli/        lk-cli               — click CLI (lk command)
 ├── ui/         lk-ui                — FastAPI web interface
-├── mcp/        lk-mcp               — MCP server (stdio transport)
+├── mcp/        lk-mcp               — MCP server (stdio + SSE)
 ├── desktop/    lk-desktop           — macOS menu bar app + service supervisor
 └── readcast/   readcast-v2          — readcast adapter layer
 ```
