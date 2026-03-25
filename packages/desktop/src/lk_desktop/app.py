@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 import sys
 import threading
+import subprocess as _sp
 import webbrowser
 from contextlib import closing, suppress
 from pathlib import Path
@@ -86,7 +87,7 @@ class LKDesktopApp(rumps.App):
 
             if svc.web_url and state.status == "running":
                 title = f"{icon} {svc.display_name}"
-                item = rumps.MenuItem(title, callback=lambda _, url=svc.web_url: webbrowser.open(url))
+                item = rumps.MenuItem(title, callback=lambda _, url=svc.web_url: _open_ui(url))
             else:
                 title = f"{icon} {svc.display_name}    {label}"
                 item = rumps.MenuItem(title)
@@ -130,8 +131,7 @@ class LKDesktopApp(rumps.App):
         threading.Thread(target=self.supervisor.stop_all, daemon=True).start()
 
     def _open_logs(self, _) -> None:
-        import subprocess as sp
-        sp.run(["open", str(self.supervisor.logs_dir)])
+        _sp.run(["open", str(self.supervisor.logs_dir)])
 
     def _toggle_login(self, sender) -> None:
         if is_installed():
@@ -181,6 +181,26 @@ def status():
         icon = STATUS_ICONS.get(state.status, "\u25cb")
         label = STATUS_LABELS.get(state.status, state.status)
         click.echo(f"  {icon} {svc.display_name:20s} {label}")
+
+
+_LK_APP_BUNDLE = "com.localknowledge.app"
+
+
+def _open_ui(url: str) -> None:
+    """Open the Tauri native app if installed, otherwise fall back to browser."""
+    try:
+        result = _sp.run(
+            ["mdfind", f"kMDItemCFBundleIdentifier == '{_LK_APP_BUNDLE}'"],
+            capture_output=True, text=True, timeout=3,
+        )
+        app_path = result.stdout.strip().splitlines()[0] if result.stdout.strip() else None
+    except (OSError, IndexError):
+        app_path = None
+
+    if app_path:
+        _sp.Popen(["open", "-a", app_path])
+    else:
+        webbrowser.open(url)
 
 
 def _run_app() -> None:

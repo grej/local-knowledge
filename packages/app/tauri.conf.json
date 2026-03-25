@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicedoc/jsonschemas/main/tauri/tauri-conf-v2.json",
+  "productName": "Local Knowledge",
+  "version": "0.1.0",
+  "identifier": "com.localknowledge.app",
+  "build": {
+    "frontendDist": "http://127.0.0.1:8765"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "title": "Local Knowledge",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ],
+    "security": {}
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": [
+      "icons/icon.png"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "15.0"
+    }
+  }
+}
