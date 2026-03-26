@@ -1,13 +1,14 @@
-# Where We Are — 2026-03-25
+# Where We Are — 2026-03-26
 
 ## Project Overview
 
-Local Knowledge is a macOS Apple Silicon app for personal knowledge management with TTS narration. Two repos:
+Local Knowledge is a macOS Apple Silicon app for personal knowledge management with TTS narration. Three repos:
 
-- **local-knowledge** (`/Users/greg/Documents/dev/local-knowledge`) — monorepo: core, cli, ui, mcp, desktop (menu bar), app (Tauri). Published to anaconda.org/gjennings as `local-knowledge` v0.4.0.
-- **readcast** (`/Users/greg/Documents/dev/transcriber`) — article capture, TTS synthesis, web UI. Published as `readcast` v0.2.0.
+- **local-knowledge** (`/Users/greg/Documents/dev/local-knowledge`) — monorepo: core, cli, ui, mcp, desktop (menu bar), app (Tauri). Published to anaconda.org/gjennings as `local-knowledge` v0.5.0.
+- **readcast** (`/Users/greg/Documents/dev/transcriber`) — article capture, TTS synthesis, web UI. Published as `readcast` v0.3.0.
+- **kokoro-mlx** (`/Users/greg/Documents/dev/kokoro-mlx`) — local TTS daemon (Swift/MLX). Published as `kokoro-edge` v0.1.1.
 
-Both share `~/.localknowledge/store.db` (SQLite). readcast depends on localknowledge-core.
+Both Python packages share `~/.localknowledge/store.db` (SQLite). readcast depends on localknowledge-core and kokoro-edge.
 
 ## Installation
 
@@ -25,113 +26,91 @@ Then `lk-desktop install` sets up launchd for start-on-login. Menu bar app super
 - lk-ui (knowledge base UI, port 8321)
 - lk-mcp (MCP server for Claude, port 8322)
 
-## Current State of the UX Rewrite
+## Published Versions (as of 2026-03-26)
 
-We're implementing a major UX overhaul based on the spec at `next-steps-24-mar/spec.md` and the HTML prototype at `next-steps-24-mar/local-knowledge-new-proposed-interface.html`.
+| Package | Version | Channel | Triggered by |
+|---------|---------|---------|-------------|
+| kokoro-edge | 0.1.1 | anaconda.org/gjennings | `git tag v*` in kokoro-mlx |
+| local-knowledge | 0.5.0 | anaconda.org/gjennings | `git tag v*` in local-knowledge |
+| readcast | 0.3.0 | anaconda.org/gjennings | `git tag v*` in transcriber |
 
-### What's Done
+Tauri app v0.5.0 built locally (DMG at `packages/app/target/release/bundle/dmg/`). No CI for Tauri yet.
 
-**Backend (fully working, 109 tests passing):**
-- `lists` table: user-defined collections, todos, playlists (seeded with 5 test lists)
-- `list_items` join table: docs in lists with position, due dates, done state
-- Renditions system: get/set/clear renditions on document metadata, backwards-compatible with old audio fields
-- API endpoints: lists CRUD, list items CRUD with reorder, renditions (audio/summary/audio_summary), batch narrate
-- Article serialization includes `renditions` and `list_memberships`
-- List items endpoint now enriches articles with `audio_url`, `has_audio`, and `renditions`
-- Tags seeded on documents from `document_tags` table
+## What Was Done — 2026-03-25/26 Session
 
-**Frontend (app.jsx, ~2060 lines — fully implemented):**
+### Playwright E2E Test Suite (readcast)
+- Added 54 Playwright e2e tests across 10 test files
+- Created test infrastructure: `playwright.config.ts`, `scripts/test-server.py` (starts FastAPI with isolated temp DB), `tests/e2e/seed.py` (seeds 8 articles + 4 lists)
+- Coverage: layout, navigation, article list/detail, playlist, drawer, player, keyboard, search, drag-drop
+- Added `data-testid` attributes to ~20 key UI elements
+- Added `@playwright/test` + Chromium to dev dependencies
+- Added `pixi run test:e2e` and `pixi run test:e2e:headed` tasks
 
-All 6 spec steps complete:
-- Three-panel layout: nav (210px) + center (370px) + detail (flex:1)
-- Collapsible nav with icon rail (36px) — `[` key toggles
-- Nav sections: "Knowledge base" with "All items", "Action items" (todos), "Lists" (collections/playlists)
-- Center panel: doc list with audio icons, tag pills, list badges, right-gutter actions
-- Playlist hero view: icon, name, stats, "Play all" + hamburger buttons, tracklist
-- Detail panel: header, rendition bar, list assignment toggles, body text
-- Right drawer (queue controller): 280px slide-in, playlist selector, track list
-- Bottom bar: transport controls, track info, progress bar, queue toggle
-- Audio playback wired to real audio file URLs from renditions
-- Keyboard shortcuts (`[` nav, `]` drawer, Space play/pause, `/` search, arrows navigate)
-- Drag-and-drop reorder in playlist and drawer
-- Popovers for list assignment and playlist picker
-- `data-testid` attributes on ~20 key elements for Playwright testing
+### Audio Playback Fixes (readcast)
+- Fixed `audio.src` comparison bug (relative vs absolute URL mismatch)
+- Enriched `/api/lists/{id}/items` endpoint to include `audio_url`, `has_audio`, and `renditions` on each article
+- Fixed prev/next track buttons to maintain playback state (was stopping audio on skip)
 
-**Playwright E2E Tests (54 tests passing):**
-- Layout: three-panel rendering, panel widths, dark background
-- Navigation: list selection, playlist hero, nav collapse/expand, keyboard `[`
-- Article list: rendering, audio icons, tag pills, clicking updates detail
-- Article detail: title, tags, list memberships, body text loading
-- Playlist: hero section, Play All, tracklist, narration banner, now-playing
-- Drawer: open/close, track list, playlist selector, keyboard `]`
-- Player: bottom bar visibility, track title/position, next/prev, audio src, progress bar
-- Keyboard: `[`, `]`, Space, `/`, ArrowDown
-- Search: filtering, clearing, `/` focus
-- Drag-and-drop: handles, draggable items, reorder
+### Frontend Rewrite — Type-Based Navigation (readcast)
+- **Replaced per-list nav sidebar** with 4 fixed type buttons in the rail: ⊙ All, ☐ Action, ◎ Collection, ♫ Playlist
+- **Chooser view**: when a type has multiple lists, shows cards with icon, name, metadata, EQ bars for playing playlist
+- **Removed right drawer**: replaced with queue peek popover (floating above player bar, ≡ button)
+- **Speed control**: speed button in player bar + playlist hero, popover with presets (0.5×–2×), adjusted duration display
+- **Undo toast system**: destructive actions show toast with Undo button, auto-dismiss 3.5s
+- **List CRUD**: create modal with type grid + icon picker, edit mode (✎/✓), rename, delete with confirmation
+- **List pill toggles**: detail panel pills are functional add/remove buttons with color states
+- **Article metadata**: source URL as clickable link, author, publication, published date, word count
+- **Orientation chips**: All Items shows due count, unnarrated count + Gen All button
+- **Always-visible player bar** (Spotify model): auto-loads first playlist on mount, shows transport controls immediately
+- **Layout fixes**: `#root` flex column, detail panel scroll (`overflow-y: scroll`, `-webkit-overflow-scrolling: touch`)
 
-### Fixed Issues (this session)
+### Bundle & Build Fixes (readcast)
+- Renamed `bundle.js` → `app.js` to break Brave's aggressive caching
+- Updated `build-frontend.mjs`, `index.html`, `verify_distribution.py`, and API tests
 
-1. **Browser cache bust** — Renamed `bundle.js` to `app.js` to break Brave's aggressive caching of the old bundle. Removed query-string cache bust.
+### Tagged Releases
+- local-knowledge v0.5.0: UX spec docs + prototype files
+- readcast v0.3.0: type-nav refactor + Playwright tests + all fixes
+- Tauri app v0.5.0: local DMG build
 
-2. **Audio src comparison bug** — Fixed `audio.src !== item.article.audio_url` (absolute vs relative URL mismatch) to use `!audio.src.endsWith(item.article.audio_url)`.
+### Known Issues
+- **kokoro-edge CI broken**: Swift build fails because MLXUtilsLibrary requires tools version 6.2.0 but the macos-15 GitHub runner has older Xcode. Existing v0.1.1 binary works fine. Fix: pin older MLXUtilsLibrary or wait for runner update.
+- **Tauri app not in CI**: no automated DMG distribution yet. Local build only.
+- **Playwright tests need updating**: the e2e tests were written for the old nav sidebar + drawer architecture. They pass for the Playwright test server (which has its own seed data) but the test assertions reference removed components like `nav-sidebar`. Needs a test rewrite pass.
 
-3. **List items missing audio_url** — The `/api/lists/{id}/items` endpoint was returning raw article data without `audio_url` or `renditions`. Fixed to enrich each article with `audio_url`, `has_audio`, and `renditions`.
-
-### Data State
-
-- 23 documents in `~/.localknowledge/store.db`
-- 5 lists seeded: "Respond To" (todo, 4 items), "Study Psychology" (collection, 3), "Geopolitics Deep Dive" (collection, 5), "Morning Commute" (playlist, 5), "AI Tools to Evaluate" (collection, 2)
-- Tags seeded on ~17 documents
-- 19 articles have audio files, 4 don't
-
-### Architecture
-
-```
-body (flex-direction: column)
-├── #app (display: flex; flex: 1; overflow: hidden)
-│   ├── .nav-rail (36px, only when collapsed)
-│   ├── .nav (210px, collapsible to width:0)
-│   ├── .center (370px, flex column, overflow:hidden)
-│   │   ├── header (flexShrink:0)
-│   │   ├── search (flexShrink:0)
-│   │   └── doc-list (flex:1, overflow-y:auto, minHeight:0)
-│   ├── .detail-wrap (flex:1, display:flex)
-│   │   ├── .detail (flex:1, overflow-y:auto, minWidth:0)
-│   │   └── .drawer (width:0 or 280px, transition)
-├── #bbar-container (flexShrink:0)
-│   └── .bbar (50px, when playlist loaded)
-```
-
-### Key Files
+## Key Files
 
 | File | What |
 |---|---|
-| `transcriber/src/readcast/web/frontend/app.jsx` | React frontend (~2060 lines) |
-| `transcriber/src/readcast/web/static/app.js` | Built bundle (was bundle.js) |
+| `transcriber/src/readcast/web/frontend/app.jsx` | React frontend (~1250 lines, rewritten) |
+| `transcriber/src/readcast/web/static/app.js` | Built bundle |
 | `transcriber/src/readcast/core/store.py` | SQLite store: lists, items, renditions |
 | `transcriber/src/readcast/api/app.py` | FastAPI endpoints |
 | `transcriber/src/readcast/services.py` | Business logic + ProcessingWorker |
 | `transcriber/tests/test_api.py` | API tests (109 passing) |
-| `transcriber/tests/e2e/` | Playwright e2e tests (54 passing) |
-| `transcriber/tests/e2e/seed.py` | Test data seeder |
+| `transcriber/tests/e2e/` | Playwright e2e tests (54, need updating) |
 | `transcriber/playwright.config.ts` | Playwright configuration |
-| `transcriber/scripts/test-server.py` | E2E test server with temp DB |
+| `transcriber/recipe/recipe.yaml` | Conda recipe (requires local-knowledge >=0.5.0) |
+| `local-knowledge/packages/app/tauri.conf.json` | Tauri app config (v0.5.0) |
 | `local-knowledge/next-steps-24-mar/spec.md` | Implementation spec |
-| `local-knowledge/next-steps-24-mar/local-knowledge-new-proposed-interface.html` | Visual prototype |
+| `local-knowledge/docs/internal/where-we-are.md` | This file |
 
-### Running Tests
+## Running Tests
 
 ```bash
 # Backend tests (109 passing)
-pixi run test
+cd transcriber && pixi run test
 
-# E2E tests (54 passing)
-pixi run test:e2e          # headless
-pixi run test:e2e:headed   # watch in browser
+# E2E tests (need updating for new nav)
+cd transcriber && pixi run test:e2e
+
+# Lint
+cd transcriber && pixi run lint
 ```
 
-### Next Steps
+## Next Steps
 
-1. **Manually verify in Safari** — Open `pixi run start`, confirm scrolling works, drawer toggles, audio plays
-2. Tag and publish next version
-3. Consider adding CI integration for Playwright tests
+1. **Fix Playwright e2e tests** for the new type-nav architecture (rail buttons, chooser, queue peek)
+2. **Fix kokoro-edge CI** — pin MLXUtilsLibrary or update Xcode requirement
+3. **Add Tauri CI** — GitHub Actions workflow for automated DMG builds on tag push
+4. **Consider**: isNew indicator, smart sort, drag-to-reorder in playlist view
