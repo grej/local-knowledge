@@ -1,0 +1,3216 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Local Knowledge — Concept C Updated</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Source+Serif+4:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --bg0: #08090d;
+                --bg1: #0c0d12;
+                --bg2: #13151d;
+                --bg3: #181b26;
+                --bg4: #1a1d27;
+                --br: #222538;
+                --br2: #181a28;
+                --t1: #e4e5ea;
+                --t2: #a0a4b8;
+                --t3: #6b7084;
+                --t4: #4a4d60;
+                --acc: #6c8cff;
+                --abg: rgba(108, 140, 255, 0.1);
+                --grn: #4ade80;
+                --gbg: rgba(74, 222, 128, 0.12);
+                --red: #f87171;
+                --rbg: rgba(248, 113, 113, 0.12);
+                --amb: #ef9f27;
+                --ambg: rgba(239, 159, 39, 0.12);
+                --pur: #a855f7;
+                --pbg: rgba(168, 85, 247, 0.12);
+                --teal: #2dd4bf;
+                --tbg: rgba(45, 212, 191, 0.12);
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: var(--bg0);
+                color: var(--t1);
+                font-family: "DM Sans", "Avenir Next", system-ui, sans-serif;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            ::selection {
+                background: rgba(108, 140, 255, 0.3);
+            }
+            ::-webkit-scrollbar {
+                width: 5px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #222538;
+                border-radius: 3px;
+            }
+            input::placeholder {
+                color: var(--t3);
+            }
+            button {
+                font-family: inherit;
+                cursor: pointer;
+            }
+
+            /* === NAV === */
+            .nav {
+                width: 210px;
+                flex-shrink: 0;
+                border-right: 1px solid var(--br);
+                display: flex;
+                flex-direction: column;
+                background: var(--bg0);
+                user-select: none;
+                overflow-y: auto;
+                overflow-x: hidden;
+                transition: width 0.2s ease;
+            }
+            .nav.collapsed {
+                width: 0;
+                border-right: none;
+                overflow: hidden;
+            }
+            .nav-toggle {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                border: 1px solid var(--br);
+                background: var(--bg1);
+                color: var(--t3);
+                font-size: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: 0.1s;
+                flex-shrink: 0;
+            }
+            .nav-toggle:hover {
+                background: var(--bg3);
+                color: var(--t2);
+            }
+            .nav-rail {
+                width: 36px;
+                flex-shrink: 0;
+                border-right: 1px solid var(--br);
+                background: var(--bg0);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding-top: 10px;
+                gap: 4px;
+            }
+            .nav-rail.hidden {
+                display: none;
+            }
+            .nav-rail .rail-btn {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                border: none;
+                background: transparent;
+                color: var(--t3);
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: 0.1s;
+            }
+            .nav-rail .rail-btn:hover {
+                background: var(--bg2);
+                color: var(--t2);
+            }
+            .nh {
+                padding: 12px 14px 8px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .nh .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--grn);
+            }
+            .nh span {
+                font-size: 13px;
+                font-weight: 700;
+            }
+            .nh .ct {
+                font-size: 10px;
+                color: var(--t3);
+                margin-left: auto;
+            }
+
+            /* Nav collapsible section */
+            .nsec {
+            }
+            .nsec-head {
+                padding: 5px 14px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                cursor: pointer;
+                font-size: 10px;
+                font-weight: 600;
+                color: var(--t4);
+                text-transform: uppercase;
+                letter-spacing: 0.7px;
+                user-select: none;
+                transition: color 0.1s;
+            }
+            .nsec-head:hover {
+                color: var(--t3);
+            }
+            .nsec-head .chev {
+                font-size: 8px;
+                transition: transform 0.15s;
+                width: 12px;
+                text-align: center;
+            }
+            .nsec-head.closed .chev {
+                transform: rotate(-90deg);
+            }
+            .nsec-body {
+                overflow: hidden;
+                transition: max-height 0.2s ease;
+            }
+            .nsec-body.closed {
+                max-height: 0 !important;
+            }
+
+            .ni {
+                padding: 6px 14px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                font-size: 12px;
+                color: var(--t2);
+                transition: background 0.06s;
+                border-left: 2px solid transparent;
+            }
+            .ni:hover {
+                background: var(--bg2);
+            }
+            .ni.on {
+                background: var(--bg4);
+                border-left-color: var(--acc);
+                color: var(--t1);
+                font-weight: 600;
+            }
+            .ni .ic {
+                font-size: 14px;
+                width: 18px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+            .ni .lb {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .ni .ct {
+                font-size: 10px;
+                color: var(--t4);
+                font-family: "JetBrains Mono", monospace;
+            }
+            .ni .tp {
+                font-size: 8px;
+                padding: 1px 4px;
+                border-radius: 3px;
+            }
+            .ni .playing-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--acc);
+                flex-shrink: 0;
+                animation: pulse 1.5s infinite;
+            }
+            .nsep {
+                height: 1px;
+                background: var(--br2);
+                margin: 3px 12px;
+            }
+            .nadd {
+                padding: 6px 14px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                font-size: 11px;
+                color: var(--t4);
+                transition: 0.1s;
+            }
+            .nadd:hover {
+                color: var(--acc);
+            }
+            .nav-footer {
+                margin-top: auto;
+                padding: 8px 14px;
+                border-top: 1px solid var(--br2);
+                font-size: 10px;
+                color: var(--t4);
+                line-height: 1.8;
+            }
+            .nav-footer kbd {
+                font-family: "JetBrains Mono", monospace;
+                font-size: 9px;
+                padding: 1px 4px;
+                border-radius: 3px;
+                background: var(--bg2);
+                border: 1px solid var(--br);
+                color: var(--t3);
+            }
+
+            /* === CENTER === */
+            .center {
+                width: 370px;
+                flex-shrink: 0;
+                border-right: 1px solid var(--br);
+                display: flex;
+                flex-direction: column;
+                background: var(--bg1);
+            }
+            .ch {
+                padding: 8px 12px;
+                border-bottom: 1px solid var(--br);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+            .ch .chi {
+                font-size: 15px;
+            }
+            .ch .cht {
+                font-size: 13px;
+                font-weight: 600;
+                flex: 1;
+            }
+            .ch .chb {
+                font-size: 9px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-weight: 500;
+            }
+            .csearch {
+                padding: 7px 10px;
+                border-bottom: 1px solid var(--br2);
+                flex-shrink: 0;
+                position: relative;
+            }
+            .csearch::before {
+                content: "⌕";
+                position: absolute;
+                left: 20px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--t3);
+                font-size: 12px;
+                pointer-events: none;
+            }
+            .csearch input {
+                width: 100%;
+                padding: 6px 10px 6px 26px;
+                border-radius: 6px;
+                border: 1px solid var(--br);
+                background: var(--bg2);
+                color: var(--t1);
+                font-size: 12px;
+                font-family: inherit;
+                outline: none;
+            }
+            .csearch input:focus {
+                border-color: var(--acc);
+            }
+            .dlist {
+                flex: 1;
+                overflow-y: auto;
+            }
+
+            /* Batch banner */
+            .bbanner {
+                padding: 7px 12px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                border-bottom: 1px solid var(--br2);
+                flex-shrink: 0;
+                background: rgba(239, 159, 39, 0.04);
+                color: var(--amb);
+            }
+
+            /* === DOC ROW === */
+            .dr {
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--br2);
+                cursor: pointer;
+                display: flex;
+                gap: 7px;
+                align-items: flex-start;
+                transition: background 0.06s;
+            }
+            .dr:hover {
+                background: var(--bg3);
+            }
+            .dr.sel {
+                background: var(--bg4);
+                border-left: 2px solid var(--acc);
+                padding-left: 8px;
+            }
+            .aud-icon {
+                width: 26px;
+                height: 26px;
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                flex-shrink: 0;
+                margin-top: 1px;
+                background: transparent;
+                color: var(--t4);
+                border: none;
+                position: relative;
+                transition: 0.12s;
+            }
+            .aud-icon.ready {
+                color: var(--acc);
+                background: var(--abg);
+            }
+            .aud-icon.gen {
+                color: var(--amb);
+                animation: pulse 1.2s infinite;
+            }
+            .aud-icon .hover-play {
+                position: absolute;
+                inset: 0;
+                border-radius: 6px;
+                background: var(--acc);
+                color: var(--bg0);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                font-weight: 700;
+            }
+            .dr:hover .aud-icon.ready .hover-play {
+                display: flex;
+            }
+            .dc {
+                flex: 1;
+                min-width: 0;
+            }
+            .dt {
+                font-size: 12px;
+                font-weight: 500;
+                line-height: 1.4;
+                margin-bottom: 2px;
+            }
+            .dm {
+                font-size: 10px;
+                color: var(--t3);
+                display: flex;
+                gap: 4px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .dbadges {
+                display: flex;
+                gap: 3px;
+                flex-wrap: wrap;
+                margin-top: 2px;
+            }
+            .tag {
+                font-size: 8px;
+                padding: 1px 5px;
+                border-radius: 6px;
+            }
+            .lbadge {
+                font-size: 7px;
+                padding: 1px 5px;
+                border-radius: 4px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
+            }
+
+            /* Right gutter actions */
+            .dacts {
+                display: flex;
+                gap: 2px;
+                flex-shrink: 0;
+                flex-direction: column;
+                align-items: center;
+                margin-top: 1px;
+            }
+            .da {
+                width: 24px;
+                height: 20px;
+                border-radius: 4px;
+                border: none;
+                font-size: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: 0.1s;
+                background: transparent;
+                color: var(--t4);
+                position: relative;
+            }
+            .da:hover {
+                background: rgba(255, 255, 255, 0.06);
+                color: var(--t2);
+            }
+            .da.inq {
+                color: var(--acc);
+                background: var(--abg);
+            }
+            .da-tip {
+                display: none;
+                position: absolute;
+                right: 28px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: var(--bg4);
+                border: 1px solid var(--br);
+                border-radius: 5px;
+                padding: 3px 8px;
+                font-size: 9px;
+                color: var(--t2);
+                white-space: nowrap;
+                z-index: 10;
+                pointer-events: none;
+            }
+            .da:hover .da-tip {
+                display: block;
+            }
+
+            /* === PLAYLIST CENTER VIEW === */
+            .pl-hero {
+                padding: 16px;
+                border-bottom: 1px solid var(--br);
+                background: linear-gradient(
+                    180deg,
+                    rgba(108, 140, 255, 0.05) 0%,
+                    transparent 100%
+                );
+            }
+            .pl-hero-top {
+                display: flex;
+                gap: 14px;
+                align-items: center;
+                margin-bottom: 14px;
+            }
+            .pl-art {
+                width: 60px;
+                height: 60px;
+                border-radius: 12px;
+                background: linear-gradient(
+                    135deg,
+                    rgba(108, 140, 255, 0.2),
+                    rgba(168, 85, 247, 0.15)
+                );
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 26px;
+                flex-shrink: 0;
+            }
+            .pl-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .pl-name {
+                font-size: 15px;
+                font-weight: 700;
+                margin-bottom: 2px;
+            }
+            .pl-stats {
+                font-size: 10px;
+                color: var(--t3);
+            }
+            .pl-transport {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .pl-np-label {
+                font-size: 9px;
+                color: var(--t4);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+            }
+            .pl-np-title {
+                font-size: 13px;
+                font-weight: 600;
+                margin-bottom: 6px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .pl-progress {
+                flex: 1;
+                height: 4px;
+                background: var(--br);
+                border-radius: 2px;
+                cursor: pointer;
+            }
+            .pl-fill {
+                height: 100%;
+                background: var(--acc);
+                border-radius: 2px;
+                width: 35%;
+                transition: width 0.3s;
+            }
+
+            /* Playlist row */
+            .plr {
+                padding: 7px 12px;
+                border-bottom: 1px solid var(--br2);
+                cursor: pointer;
+                display: flex;
+                gap: 7px;
+                align-items: center;
+                transition: background 0.06s;
+            }
+            .plr:hover {
+                background: var(--bg3);
+            }
+            .plr.sel {
+                background: var(--bg4);
+                border-left: 2px solid var(--acc);
+                padding-left: 10px;
+            }
+            .plr.playing {
+                background: rgba(108, 140, 255, 0.04);
+            }
+            .plr .plnum {
+                width: 18px;
+                font-size: 10px;
+                color: var(--t4);
+                text-align: center;
+                font-family: "JetBrains Mono", monospace;
+                flex-shrink: 0;
+            }
+            .plr.playing .plnum {
+                color: var(--acc);
+            }
+            .plr .grip {
+                cursor: grab;
+                color: var(--t4);
+                font-size: 12px;
+                flex-shrink: 0;
+            }
+            .plr .grip:active {
+                cursor: grabbing;
+            }
+            .plr .plstate {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 9px;
+                flex-shrink: 0;
+            }
+            .plr .plstate.ready {
+                background: var(--abg);
+                color: var(--acc);
+            }
+            .plr .plstate.miss {
+                background: var(--rbg);
+                color: var(--red);
+                font-size: 8px;
+            }
+            .plr .plstate.genst {
+                background: var(--ambg);
+                color: var(--amb);
+                animation: pulse 1.2s infinite;
+            }
+            .plr .pldur {
+                font-size: 10px;
+                color: var(--t4);
+                font-family: "JetBrains Mono", monospace;
+                flex-shrink: 0;
+            }
+            .plr .plrm {
+                opacity: 0;
+                font-size: 13px;
+                color: var(--red);
+                cursor: pointer;
+                flex-shrink: 0;
+                width: 16px;
+                text-align: center;
+                transition: opacity 0.1s;
+            }
+            .plr:hover .plrm {
+                opacity: 1;
+            }
+
+            /* === DETAIL (compressible) === */
+            .detail-wrap {
+                flex: 1;
+                display: flex;
+                overflow: hidden;
+                position: relative;
+            }
+            .detail {
+                flex: 1;
+                overflow-y: auto;
+                background: var(--bg2);
+                transition: width 0.2s ease;
+                min-width: 0;
+            }
+            .det-hdr {
+                padding: 20px 24px 12px;
+                border-bottom: 1px solid var(--br);
+            }
+            .det-title {
+                font-size: 18px;
+                font-weight: 700;
+                font-family: "Source Serif 4", Georgia, serif;
+                line-height: 1.35;
+                margin-bottom: 6px;
+            }
+            .det-meta {
+                font-size: 11px;
+                color: var(--t3);
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            /* Rendition bar */
+            .rbar {
+                padding: 10px 24px;
+                border-bottom: 1px solid var(--br);
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .rb-st {
+                font-size: 10px;
+                padding: 3px 8px;
+                border-radius: 5px;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .rb-st.ready {
+                background: var(--abg);
+                color: var(--acc);
+            }
+            .rb-st.none {
+                background: var(--bg1);
+                color: var(--t4);
+            }
+            .rb-st.gen {
+                background: var(--ambg);
+                color: var(--amb);
+            }
+            .btn {
+                padding: 5px 10px;
+                border-radius: 6px;
+                border: 1px solid var(--br);
+                background: rgba(255, 255, 255, 0.03);
+                color: var(--t3);
+                font-size: 11px;
+                font-weight: 600;
+                font-family: inherit;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                transition: 0.1s;
+                white-space: nowrap;
+            }
+            .btn:hover {
+                background: rgba(255, 255, 255, 0.06);
+                color: var(--t2);
+            }
+            .btn-acc {
+                background: var(--acc);
+                color: var(--bg0);
+                border-color: var(--acc);
+            }
+            .btn-acc:hover {
+                background: #8aa4ff;
+            }
+            .btn-sm {
+                padding: 3px 8px;
+                font-size: 10px;
+            }
+            .btn-ghost {
+                border: none;
+                background: none;
+            }
+            .btn-play {
+                background: var(--acc);
+                color: var(--bg0);
+                border-color: var(--acc);
+                border-radius: 50%;
+                width: 28px;
+                height: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                font-size: 11px;
+                border: none;
+                flex-shrink: 0;
+            }
+            .btn-play:hover {
+                background: #8aa4ff;
+            }
+            /* Split button */
+            .split {
+                display: flex;
+                border: 1px solid var(--br);
+                border-radius: 6px;
+                overflow: hidden;
+            }
+            .split .btn {
+                border: none;
+                border-radius: 0;
+                padding: 4px 10px;
+            }
+            .split .btn + .btn {
+                border-left: 1px solid var(--br);
+            }
+
+            /* List assignment */
+            .det-lists {
+                padding: 10px 24px;
+                border-bottom: 1px solid var(--br);
+                display: flex;
+                gap: 5px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .la {
+                padding: 4px 9px;
+                border-radius: 6px;
+                border: 1px solid var(--br);
+                background: transparent;
+                color: var(--t3);
+                font-size: 10px;
+                font-weight: 500;
+                cursor: pointer;
+                font-family: inherit;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                transition: 0.1s;
+            }
+            .la:hover {
+                background: rgba(255, 255, 255, 0.04);
+            }
+            .la.in {
+                font-weight: 600;
+            }
+
+            /* Body */
+            .det-body {
+                padding: 16px 24px;
+                font-size: 14px;
+                font-family: "Source Serif 4", Georgia, serif;
+                line-height: 1.7;
+                color: #b8bac4;
+            }
+
+            /* === RIGHT DRAWER (queue controller) === */
+            .drawer {
+                width: 0;
+                flex-shrink: 0;
+                overflow: hidden;
+                transition: width 0.2s ease;
+                background: var(--bg1);
+                border-left: 1px solid var(--br);
+                display: flex;
+                flex-direction: column;
+            }
+            .drawer.open {
+                width: 280px;
+            }
+            .dw-head {
+                padding: 10px 12px;
+                border-bottom: 1px solid var(--br);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+            .dw-head .dw-icon {
+                font-size: 14px;
+                color: var(--acc);
+            }
+            .dw-head .dw-title {
+                font-size: 12px;
+                font-weight: 600;
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .dw-head .dw-dur {
+                font-size: 10px;
+                color: var(--t4);
+                font-family: "JetBrains Mono", monospace;
+            }
+            .dw-head .dw-close {
+                width: 22px;
+                height: 22px;
+                border-radius: 5px;
+                border: none;
+                background: transparent;
+                color: var(--t3);
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: 0.1s;
+            }
+            .dw-head .dw-close:hover {
+                background: var(--bg3);
+                color: var(--t2);
+            }
+            .dw-list {
+                flex: 1;
+                overflow-y: auto;
+            }
+            .dw-item {
+                padding: 6px 10px;
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                border-bottom: 1px solid var(--br2);
+                transition: background 0.06s;
+                cursor: pointer;
+                font-size: 11px;
+            }
+            .dw-item:hover {
+                background: var(--bg3);
+            }
+            .dw-item.playing {
+                background: rgba(108, 140, 255, 0.05);
+            }
+            .dw-item .dwi-num {
+                width: 16px;
+                font-size: 10px;
+                color: var(--t4);
+                text-align: center;
+                font-family: "JetBrains Mono", monospace;
+                flex-shrink: 0;
+            }
+            .dw-item.playing .dwi-num {
+                color: var(--acc);
+            }
+            .dw-item .dwi-grip {
+                cursor: grab;
+                color: var(--t4);
+                font-size: 11px;
+                flex-shrink: 0;
+            }
+            .dw-item .dwi-title {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: var(--t2);
+            }
+            .dw-item.playing .dwi-title {
+                color: var(--t1);
+                font-weight: 500;
+            }
+            .dw-item .dwi-dur {
+                font-size: 9px;
+                color: var(--t4);
+                font-family: "JetBrains Mono", monospace;
+                flex-shrink: 0;
+            }
+            .dw-item .dwi-rm {
+                opacity: 0;
+                font-size: 12px;
+                color: var(--red);
+                cursor: pointer;
+                flex-shrink: 0;
+                width: 14px;
+                text-align: center;
+            }
+            .dw-item:hover .dwi-rm {
+                opacity: 1;
+            }
+            .dw-foot {
+                padding: 8px 10px;
+                border-top: 1px solid var(--br);
+                display: flex;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+
+            /* === BOTTOM BAR === */
+            .bbar {
+                height: 50px;
+                flex-shrink: 0;
+                border-top: 1px solid var(--br);
+                background: var(--bg1);
+                display: flex;
+                align-items: center;
+                padding: 0 14px;
+                gap: 10px;
+            }
+            .bbar.hidden {
+                display: none;
+            }
+            .bb-transport {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .bb-btn {
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                border: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                transition: 0.1s;
+            }
+            .bb-play {
+                background: var(--acc);
+                color: var(--bg0);
+            }
+            .bb-play:hover {
+                background: #8aa4ff;
+            }
+            .bb-skip {
+                background: transparent;
+                color: var(--t3);
+            }
+            .bb-skip:hover {
+                color: var(--t2);
+            }
+            .bb-info {
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+            }
+            .bb-title {
+                font-size: 11px;
+                font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .bb-sub {
+                font-size: 9px;
+                color: var(--t3);
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .bb-sub .bb-pl {
+                color: var(--acc);
+                cursor: pointer;
+            }
+            .bb-sub .bb-pl:hover {
+                text-decoration: underline;
+            }
+            .bb-progress {
+                width: 100%;
+                height: 3px;
+                background: var(--br);
+                border-radius: 2px;
+                cursor: pointer;
+                margin-top: 2px;
+            }
+            .bb-fill {
+                height: 100%;
+                background: var(--acc);
+                border-radius: 2px;
+                transition: width 0.3s;
+            }
+            .bb-time {
+                font-size: 10px;
+                color: var(--t4);
+                font-family: "JetBrains Mono", monospace;
+                white-space: nowrap;
+            }
+            .bb-qbtn {
+                width: 30px;
+                height: 26px;
+                border-radius: 6px;
+                border: 1px solid var(--br);
+                background: transparent;
+                color: var(--t3);
+                font-size: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: 0.1s;
+            }
+            .bb-qbtn:hover {
+                background: var(--abg);
+                color: var(--acc);
+                border-color: rgba(108, 140, 255, 0.3);
+            }
+            .bb-qbtn.open {
+                background: var(--abg);
+                color: var(--acc);
+                border-color: rgba(108, 140, 255, 0.3);
+            }
+
+            /* Add-to-playlist popover */
+            .atp {
+                position: fixed;
+                z-index: 200;
+                background: var(--bg4);
+                border: 1px solid var(--br);
+                border-radius: 8px;
+                padding: 4px;
+                min-width: 190px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            }
+            .atp-item {
+                padding: 6px 10px;
+                border-radius: 5px;
+                font-size: 11px;
+                color: var(--t2);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                transition: background 0.06s;
+            }
+            .atp-item:hover {
+                background: var(--bg3);
+            }
+            .atp-item .api {
+                font-size: 13px;
+                width: 18px;
+                text-align: center;
+            }
+            .atp-sep {
+                height: 1px;
+                background: var(--br);
+                margin: 3px 0;
+            }
+            .atp-item .chk {
+                margin-left: auto;
+                color: var(--grn);
+                font-size: 11px;
+            }
+
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.4;
+                }
+            }
+            @keyframes flashAcc {
+                0% {
+                    background: rgba(108, 140, 255, 0.18);
+                }
+                100% {
+                    background: transparent;
+                }
+            }
+            .flash {
+                animation: flashAcc 0.4s ease;
+            }
+        </style>
+    </head>
+    <body>
+        <div style="display: flex; flex: 1; overflow: hidden" id="app">
+            <div class="nav">
+                <div class="nh">
+                    <span class="dot"></span><span>Local Knowledge</span
+                    ><button
+                        class="nav-toggle"
+                        onclick="S.navCollapsed=true;render()"
+                        title="Collapse sidebar"
+                        style="margin-left: auto"
+                    >
+                        ◂
+                    </button>
+                </div>
+                <div class="nsec">
+                    <div
+                        class="nsec-head"
+                        onclick="S.lkOpen=!S.lkOpen;render()"
+                    >
+                        <span class="chev">▼</span>Knowledge base
+                    </div>
+                    <div class="nsec-body" style="max-height: 400px">
+                        <div class="ni on" onclick="go('all')">
+                            <span class="ic">⊙</span
+                            ><span class="lb">All items</span
+                            ><span class="ct">13</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="nsep"></div>
+                <div class="nsec">
+                    <div
+                        class="nsec-head"
+                        onclick="S.sections.action=!S.sections.action;render()"
+                    >
+                        <span class="chev">▼</span>Action items
+                    </div>
+                    <div class="nsec-body" style="max-height: 400px">
+                        <div class="ni" onclick="go('l1')" style="">
+                            <span class="ic">✉</span
+                            ><span class="lb">Respond To</span>
+                            <span
+                                class="tp"
+                                style="
+                                    background: var(--ambg);
+                                    color: var(--amb);
+                                "
+                                >☐</span
+                            >
+                            <span class="ct">2</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="nsep"></div>
+                <div class="nsec">
+                    <div
+                        class="nsec-head"
+                        onclick="S.sections.lists=!S.sections.lists;render()"
+                    >
+                        <span class="chev">▼</span>Lists
+                    </div>
+                    <div class="nsec-body" style="max-height: 600px">
+                        <div class="ni" onclick="go('l2')" style="">
+                            <span class="ic">🧠</span
+                            ><span class="lb">Study Psychology</span>
+
+                            <span
+                                class="tp"
+                                style="
+                                    background: var(--pbg);
+                                    color: var(--pur);
+                                "
+                                >◎</span
+                            >
+                            <span class="ct">2</span>
+                        </div>
+                        <div class="ni" onclick="go('l3')" style="">
+                            <span class="ic">🌍</span
+                            ><span class="lb">Geopolitics Deep Dive</span>
+
+                            <span
+                                class="tp"
+                                style="
+                                    background: var(--rbg);
+                                    color: var(--red);
+                                "
+                                >◎</span
+                            >
+                            <span class="ct">5</span>
+                        </div>
+                        <div class="ni" onclick="go('l4')" style="">
+                            <span class="ic">🎧</span
+                            ><span class="lb">Morning Commute</span>
+                            <span class="playing-dot"></span>
+                            <span
+                                class="tp"
+                                style="
+                                    background: var(--abg);
+                                    color: var(--acc);
+                                "
+                                >♫</span
+                            >
+                            <span class="ct">5</span>
+                        </div>
+                        <div class="ni" onclick="go('l5')" style="">
+                            <span class="ic">⚡</span
+                            ><span class="lb">AI Tools to Evaluate</span>
+
+                            <span
+                                class="tp"
+                                style="
+                                    background: var(--tbg);
+                                    color: var(--teal);
+                                "
+                                >◎</span
+                            >
+                            <span class="ct">2</span>
+                        </div>
+                        <div class="ni" onclick="go('l6')" style="">
+                            <span class="ic">📖</span
+                            ><span class="lb">Weekend Deep Reads</span>
+
+                            <span
+                                class="tp"
+                                style="
+                                    background: var(--pbg);
+                                    color: var(--pur);
+                                "
+                                >♫</span
+                            >
+                            <span class="ct">3</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="nadd" onclick="alert('Create list modal')">
+                    <span class="ic" style="font-size: 14px">+</span>New list
+                </div>
+                <div class="nav-footer">
+                    <kbd>↑↓</kbd> navigate <kbd>⏎</kbd> open<br /><kbd>q</kbd>
+                    queue <kbd>e</kbd> done <kbd>n</kbd> narrate<br /><kbd
+                        >[</kbd
+                    >
+                    toggle sidebar
+                </div>
+            </div>
+            <div class="center">
+                <div class="ch">
+                    <span class="chi" style="">⊙</span
+                    ><span class="cht">All Items</span
+                    ><span
+                        class="chb"
+                        style="background: var(--abg); color: var(--acc)"
+                        >13</span
+                    >
+                </div>
+                <div class="csearch"><input placeholder="Search..." /></div>
+                <div class="dlist">
+                    <div class="dr" onclick="S.sel=1;render()">
+                        <div class="aud-icon">♪</div>
+                        <div class="dc">
+                            <div class="dt">
+                                BREAKING: Someone just open-sourced your own
+                                personal intelligence terminal.
+                            </div>
+                            <div class="dm"><span>Pasted Text · 7h</span></div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,1)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=2;render()">
+                        <div class="aud-icon">♪</div>
+                        <div class="dc">
+                            <div class="dt">
+                                Vibe physics: The AI grad student
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--tbg);
+                                        color: var(--teal);
+                                    "
+                                    >ai-research</span
+                                >
+                                <span>Anthropic · 7h</span>
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,2)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=3;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="3:15"
+                            onclick="event.stopPropagation();playNow(3)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">
+                                alibaba/page-agent: JavaScript in-page GUI
+                                agent.
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--abg);
+                                        color: var(--acc);
+                                    "
+                                    >ai-tools</span
+                                >
+                                <span>Github · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--tbg);
+                                        color: var(--teal);
+                                    "
+                                    >⚡ AI Tools to Evaluate</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(3)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();addToQueue(3)"
+                            >
+                                <span class="da-tip">Add to queue</span>⊕
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,3)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=4;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="5:12"
+                            onclick="event.stopPropagation();playNow(4)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">
+                                What is "AI psychosis"? There's clearly
+                                something going on...
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--tbg);
+                                        color: var(--teal);
+                                    "
+                                    >ai-research</span
+                                >
+                                <span>x.com · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--pbg);
+                                        color: var(--pur);
+                                    "
+                                    >🧠 Study Psychology</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--pbg);
+                                        color: var(--pur);
+                                    "
+                                    >📖 Weekend Deep Reads</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(4)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();addToQueue(4)"
+                            >
+                                <span class="da-tip">Add to queue</span>⊕
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,4)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=5;render()">
+                        <div class="aud-icon gen">◌</div>
+                        <div class="dc">
+                            <div class="dt">
+                                17 emails: Q2 budget sign-off, Sarah Chen intro,
+                                Julian LSE ref
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--gbg);
+                                        color: var(--grn);
+                                    "
+                                    >email</span
+                                >
+                                <span>plugin:gmail · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--ambg);
+                                        color: var(--amb);
+                                    "
+                                    >✉ Respond To</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,5)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr sel" onclick="S.sel=6;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="4:40"
+                            onclick="event.stopPropagation();playNow(6)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">
+                                MiniMax M2.7: Early Echoes of Self-Evolution
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--tbg);
+                                        color: var(--teal);
+                                    "
+                                    >ai-research</span
+                                >
+                                <span>Minimax · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--pbg);
+                                        color: var(--pur);
+                                    "
+                                    >🧠 Study Psychology</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--pbg);
+                                        color: var(--pur);
+                                    "
+                                    >📖 Weekend Deep Reads</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(6)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();addToQueue(6)"
+                            >
+                                <span class="da-tip">Add to queue</span>⊕
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,6)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=7;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="8:00"
+                            onclick="event.stopPropagation();playNow(7)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">
+                                How to Lose Friends and Alienate People
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >geopolitics</span
+                                >
+                                <span>Thebulwark · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >🌍 Geopolitics Deep Dive</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--abg);
+                                        color: var(--acc);
+                                    "
+                                    >🎧 Morning Commute</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(7)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da inq"
+                                onclick="event.stopPropagation();addToQueue(7)"
+                            >
+                                <span class="da-tip">In queue</span>☑
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,7)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=8;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="3:40"
+                            onclick="event.stopPropagation();playNow(8)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">
+                                NVIDIA GTC 2026 Post Keynote Reaction
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--abg);
+                                        color: var(--acc);
+                                    "
+                                    >ai-tools</span
+                                >
+                                <span>x.com · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--ambg);
+                                        color: var(--amb);
+                                    "
+                                    >✉ Respond To</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--tbg);
+                                        color: var(--teal);
+                                    "
+                                    >⚡ AI Tools to Evaluate</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(8)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();addToQueue(8)"
+                            >
+                                <span class="da-tip">Add to queue</span>⊕
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,8)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=9;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="10:20"
+                            onclick="event.stopPropagation();playNow(9)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">
+                                The West wasted Ukraine's years of sacrifice
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >geopolitics</span
+                                >
+                                <span>Pasted · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >🌍 Geopolitics Deep Dive</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--abg);
+                                        color: var(--acc);
+                                    "
+                                    >🎧 Morning Commute</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(9)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da inq"
+                                onclick="event.stopPropagation();addToQueue(9)"
+                            >
+                                <span class="da-tip">In queue</span>☑
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,9)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=10;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="9:00"
+                            onclick="event.stopPropagation();playNow(10)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">Rise of the AI Soldiers</div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >geopolitics</span
+                                ><span
+                                    class="tag"
+                                    style="
+                                        background: var(--ambg);
+                                        color: var(--amb);
+                                    "
+                                    >mil-tech</span
+                                >
+                                <span>Pasted · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >🌍 Geopolitics Deep Dive</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--abg);
+                                        color: var(--acc);
+                                    "
+                                    >🎧 Morning Commute</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(10)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da inq"
+                                onclick="event.stopPropagation();addToQueue(10)"
+                            >
+                                <span class="da-tip">In queue</span>☑
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,10)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=11;render()">
+                        <div class="aud-icon">♪</div>
+                        <div class="dc">
+                            <div class="dt">
+                                Are we in the foothills of World War 3?
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >geopolitics</span
+                                >
+                                <span>Pasted · 1d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >🌍 Geopolitics Deep Dive</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,11)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=12;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="40:00"
+                            onclick="event.stopPropagation();playNow(12)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">
+                                The Art of Doing Science and Engineering
+                            </div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--pbg);
+                                        color: var(--pur);
+                                    "
+                                    >reading</span
+                                >
+                                <span>Pasted · 2d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--abg);
+                                        color: var(--acc);
+                                    "
+                                    >🎧 Morning Commute</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--pbg);
+                                        color: var(--pur);
+                                    "
+                                    >📖 Weekend Deep Reads</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(12)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da inq"
+                                onclick="event.stopPropagation();addToQueue(12)"
+                            >
+                                <span class="da-tip">In queue</span>☑
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,12)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dr" onclick="S.sel=13;render()">
+                        <div
+                            class="aud-icon ready"
+                            title="6:20"
+                            onclick="event.stopPropagation();playNow(13)"
+                        >
+                            ♫
+                            <div class="hover-play">▶</div>
+                        </div>
+                        <div class="dc">
+                            <div class="dt">HCR — March 21, 2026</div>
+                            <div class="dm">
+                                <span
+                                    class="tag"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >geopolitics</span
+                                >
+                                <span>Substack · 2d</span>
+                            </div>
+                            <div class="dbadges">
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--rbg);
+                                        color: var(--red);
+                                    "
+                                    >🌍 Geopolitics Deep Dive</span
+                                >
+                                <span
+                                    class="lbadge"
+                                    style="
+                                        background: var(--abg);
+                                        color: var(--acc);
+                                    "
+                                    >🎧 Morning Commute</span
+                                >
+                            </div>
+                        </div>
+                        <div class="dacts">
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();playNow(13)"
+                            >
+                                <span class="da-tip">Play now</span>▶
+                            </button>
+                            <button
+                                class="da inq"
+                                onclick="event.stopPropagation();addToQueue(13)"
+                            >
+                                <span class="da-tip">In queue</span>☑
+                            </button>
+                            <button
+                                class="da"
+                                onclick="event.stopPropagation();showATP(event,13)"
+                            >
+                                <span class="da-tip">Add to list</span>☰
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-wrap">
+                <div class="detail">
+                    <div class="det-hdr">
+                        <div
+                            style="
+                                display: flex;
+                                gap: 5px;
+                                margin-bottom: 8px;
+                                flex-wrap: wrap;
+                            "
+                        >
+                            <span
+                                class="tag"
+                                style="
+                                    background: var(--tbg);
+                                    color: var(--teal);
+                                "
+                                >ai-research</span
+                            >
+                            <span
+                                class="lbadge"
+                                style="
+                                    background: var(--pbg);
+                                    color: var(--pur);
+                                "
+                                >🧠 Study Psychology</span
+                            >
+                            <span
+                                class="lbadge"
+                                style="
+                                    background: var(--pbg);
+                                    color: var(--pur);
+                                "
+                                >📖 Weekend Deep Reads</span
+                            >
+                        </div>
+                        <div class="det-title">
+                            MiniMax M2.7: Early Echoes of Self-Evolution
+                        </div>
+                        <div class="det-meta">
+                            <span>Minimax</span><span>·</span><span>1d</span
+                            ><span>·</span><span>4:40</span>
+                        </div>
+                    </div>
+                    <div class="rbar">
+                        <span class="rb-st ready">♫ Audio · 4:40</span>
+
+                        <button
+                            class="btn-play"
+                            onclick="playNow(6)"
+                            title="Play now"
+                        >
+                            ▶
+                        </button>
+                        <div class="split">
+                            <button class="btn btn-sm" onclick="addToQueue(6)">
+                                + Queue
+                            </button>
+                            <button
+                                class="btn btn-sm"
+                                style="color: var(--acc)"
+                                onclick="showPlaylistPicker(event,6)"
+                            >
+                                🎧 ▾
+                            </button>
+                        </div>
+
+                        <span style="flex: 1"></span>
+                        <button
+                            class="btn btn-sm btn-ghost"
+                            style="color: var(--t4)"
+                        >
+                            📝 Summary
+                        </button>
+                    </div>
+                    <div class="det-lists">
+                        <span
+                            style="
+                                font-size: 9px;
+                                color: var(--t4);
+                                margin-right: 4px;
+                            "
+                            >Lists:</span
+                        >
+                        <button
+                            class="la"
+                            style="color: var(--t3)"
+                            onclick="toggleDocInList(6,'l1')"
+                        >
+                            ✉ + Respond To</button
+                        ><button
+                            class="la in"
+                            style="
+                                border-color: var(--pur);
+                                color: var(--pur);
+                                background: var(--pbg);
+                            "
+                            onclick="toggleDocInList(6,'l2')"
+                        >
+                            🧠 ✓ Study Psychology</button
+                        ><button
+                            class="la"
+                            style="color: var(--t3)"
+                            onclick="toggleDocInList(6,'l3')"
+                        >
+                            🌍 + Geopolitics Deep Dive</button
+                        ><button
+                            class="la"
+                            style="color: var(--t3)"
+                            onclick="toggleDocInList(6,'l4')"
+                        >
+                            🎧 + Morning Commute</button
+                        ><button
+                            class="la"
+                            style="color: var(--t3)"
+                            onclick="toggleDocInList(6,'l5')"
+                        >
+                            ⚡ + AI Tools to Evaluate</button
+                        ><button
+                            class="la in"
+                            style="
+                                border-color: var(--pur);
+                                color: var(--pur);
+                                background: var(--pbg);
+                            "
+                            onclick="toggleDocInList(6,'l6')"
+                        >
+                            📖 ✓ Weekend Deep Reads
+                        </button>
+                    </div>
+                    <div class="det-body">
+                        <p style="margin-bottom: 12px">
+                            MiniMax releases M2.7 with emergent self-improvement
+                            capabilities during training.
+                        </p>
+                    </div>
+                </div>
+                <div class="drawer open">
+                    <div class="dw-head">
+                        <select
+                            style="
+                                background: transparent;
+                                border: none;
+                                color: var(--t1);
+                                font-size: 12px;
+                                font-weight: 600;
+                                font-family: inherit;
+                                outline: none;
+                                cursor: pointer;
+                                max-width: 140px;
+                                appearance: none;
+                                -webkit-appearance: none;
+                                padding-right: 12px;
+                                background-image: url(&quot;data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22&gt;&lt;path d=%221 1 5 5 9 1%22 fill=%22none%22 stroke=%22%236b7084%22 stroke-width=%221.5%22/&gt;&lt;/svg&gt;&quot;);
+                                background-repeat: no-repeat;
+                                background-position: right center;
+                            "
+                            onchange="switchDrawerPlaylist(this.value)"
+                        >
+                            <option value="l4" selected="">
+                                🎧 Morning Commute
+                            </option>
+                            <option value="l6">📖 Weekend Deep Reads</option>
+                        </select>
+                        <span class="dw-dur">5 · 73:40</span>
+                        <span style="flex: 1"></span>
+                        <button
+                            class="dw-close"
+                            onclick="S.drawer=false;render()"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    <div class="dw-list">
+                        <div
+                            class="dw-item playing"
+                            data-drag-item="0"
+                            draggable="true"
+                            ondragstart="dragStart(event,'l4',0)"
+                            ondragover="dragOver(event,0)"
+                            ondragend="dragEnd(event)"
+                            ondrop="drop(event,'l4',0)"
+                            onclick="S.sel=9;render()"
+                        >
+                            <span class="dwi-num">▶</span>
+                            <span class="dwi-grip">⠿</span>
+                            <span class="dwi-title"
+                                >The West wasted Ukraine's years of
+                                sacrifice</span
+                            >
+                            <span class="dwi-dur">10:20</span>
+                            <span
+                                class="dwi-rm"
+                                onclick="event.stopPropagation();rmFromList('l4',9)"
+                                >×</span
+                            >
+                        </div>
+                        <div
+                            class="dw-item"
+                            data-drag-item="1"
+                            draggable="true"
+                            ondragstart="dragStart(event,'l4',1)"
+                            ondragover="dragOver(event,1)"
+                            ondragend="dragEnd(event)"
+                            ondrop="drop(event,'l4',1)"
+                            onclick="S.sel=7;render()"
+                        >
+                            <span class="dwi-num">2</span>
+                            <span class="dwi-grip">⠿</span>
+                            <span class="dwi-title"
+                                >How to Lose Friends and Alienate People</span
+                            >
+                            <span class="dwi-dur">8:00</span>
+                            <span
+                                class="dwi-rm"
+                                onclick="event.stopPropagation();rmFromList('l4',7)"
+                                >×</span
+                            >
+                        </div>
+                        <div
+                            class="dw-item"
+                            data-drag-item="2"
+                            draggable="true"
+                            ondragstart="dragStart(event,'l4',2)"
+                            ondragover="dragOver(event,2)"
+                            ondragend="dragEnd(event)"
+                            ondrop="drop(event,'l4',2)"
+                            onclick="S.sel=10;render()"
+                        >
+                            <span class="dwi-num">3</span>
+                            <span class="dwi-grip">⠿</span>
+                            <span class="dwi-title"
+                                >Rise of the AI Soldiers</span
+                            >
+                            <span class="dwi-dur">9:00</span>
+                            <span
+                                class="dwi-rm"
+                                onclick="event.stopPropagation();rmFromList('l4',10)"
+                                >×</span
+                            >
+                        </div>
+                        <div
+                            class="dw-item"
+                            data-drag-item="3"
+                            draggable="true"
+                            ondragstart="dragStart(event,'l4',3)"
+                            ondragover="dragOver(event,3)"
+                            ondragend="dragEnd(event)"
+                            ondrop="drop(event,'l4',3)"
+                            onclick="S.sel=12;render()"
+                        >
+                            <span class="dwi-num">4</span>
+                            <span class="dwi-grip">⠿</span>
+                            <span class="dwi-title"
+                                >The Art of Doing Science and Engineering</span
+                            >
+                            <span class="dwi-dur">40:00</span>
+                            <span
+                                class="dwi-rm"
+                                onclick="event.stopPropagation();rmFromList('l4',12)"
+                                >×</span
+                            >
+                        </div>
+                        <div
+                            class="dw-item"
+                            data-drag-item="4"
+                            draggable="true"
+                            ondragstart="dragStart(event,'l4',4)"
+                            ondragover="dragOver(event,4)"
+                            ondragend="dragEnd(event)"
+                            ondrop="drop(event,'l4',4)"
+                            onclick="S.sel=13;render()"
+                        >
+                            <span class="dwi-num">5</span>
+                            <span class="dwi-grip">⠿</span>
+                            <span class="dwi-title">HCR — March 21, 2026</span>
+                            <span class="dwi-dur">6:20</span>
+                            <span
+                                class="dwi-rm"
+                                onclick="event.stopPropagation();rmFromList('l4',13)"
+                                >×</span
+                            >
+                        </div>
+                    </div>
+                    <div class="dw-foot">
+                        <button
+                            class="btn btn-sm"
+                            style="flex: 1; justify-content: center"
+                            onclick="addToQueue(6)"
+                        >
+                            + Add current doc
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="bbar-container">
+            <div class="bbar">
+                <div class="bb-transport">
+                    <button class="bb-btn bb-skip" onclick="prev()">⏮</button>
+                    <button class="bb-btn bb-play" onclick="togglePlay()">
+                        ▐▐
+                    </button>
+                    <button class="bb-btn bb-skip" onclick="next()">⏭</button>
+                </div>
+                <div class="bb-info">
+                    <div class="bb-title">
+                        The West wasted Ukraine's years of sacrifice
+                    </div>
+                    <div class="bb-sub">
+                        <span class="bb-pl" onclick="go('l4')"
+                            >🎧 Morning Commute</span
+                        ><span>· 1/5</span>
+                    </div>
+                    <div class="bb-progress" onclick="seekTo(event,this)">
+                        <div
+                            class="bb-fill"
+                            style="width: 35.80645161290323%"
+                        ></div>
+                    </div>
+                </div>
+                <span class="bb-time">3:42 / 10:20</span>
+                <button
+                    class="bb-qbtn open"
+                    onclick="S.drawer=!S.drawer;render()"
+                    title="Queue"
+                >
+                    ≡
+                </button>
+            </div>
+        </div>
+
+        <script>
+            // ===== DATA =====
+            const D = [
+                {
+                    id: 1,
+                    t: "BREAKING: Someone just open-sourced your own personal intelligence terminal.",
+                    s: "Pasted Text",
+                    tm: "7h",
+                    tags: [],
+                    aud: "none",
+                    dur: 0,
+                    body: "It's called Crucix. Bookmark it for later. It watches 27 live data feeds across the entire planet and alerts you when something changes. Governments and intelligence firms pay six figures for this kind of setup. This runs on your laptop for free.",
+                },
+                {
+                    id: 2,
+                    t: "Vibe physics: The AI grad student",
+                    s: "Anthropic",
+                    tm: "7h",
+                    tags: ["ai-research"],
+                    aud: "none",
+                    dur: 0,
+                    body: "An exploration of how large language models develop intuitions about physical systems through training on text descriptions of experiments.",
+                },
+                {
+                    id: 3,
+                    t: "alibaba/page-agent: JavaScript in-page GUI agent.",
+                    s: "Github",
+                    tm: "1d",
+                    tags: ["ai-tools"],
+                    aud: "ready",
+                    dur: 195,
+                    body: "The GUI Agent Living in Your Webpage. Easy integration — no browser extension needed. Text-based DOM manipulation, bring your own LLMs. MIT License.",
+                },
+                {
+                    id: 4,
+                    t: 'What is "AI psychosis"? There\'s clearly something going on...',
+                    s: "x.com",
+                    tm: "1d",
+                    tags: ["ai-research"],
+                    aud: "ready",
+                    dur: 312,
+                    body: "Exploring unhealthy attachment patterns with AI chatbots and the distinction between genuine psychological effects and media sensationalism.",
+                },
+                {
+                    id: 5,
+                    t: "17 emails: Q2 budget sign-off, Sarah Chen intro, Julian LSE ref",
+                    s: "plugin:gmail",
+                    tm: "1d",
+                    tags: ["email"],
+                    aud: "gen",
+                    dur: 0,
+                    body: "3 emails need action. Q2 budget review — deadline Thursday. Sarah Chen wants a Trainium partnership call. Julian needs a reference detail for LSE.",
+                },
+                {
+                    id: 6,
+                    t: "MiniMax M2.7: Early Echoes of Self-Evolution",
+                    s: "Minimax",
+                    tm: "1d",
+                    tags: ["ai-research"],
+                    aud: "ready",
+                    dur: 280,
+                    body: "MiniMax releases M2.7 with emergent self-improvement capabilities during training.",
+                },
+                {
+                    id: 7,
+                    t: "How to Lose Friends and Alienate People",
+                    s: "Thebulwark",
+                    tm: "1d",
+                    tags: ["geopolitics"],
+                    aud: "ready",
+                    dur: 480,
+                    body: "Analysis of diplomatic failures and their cascading effects on international alliances.",
+                },
+                {
+                    id: 8,
+                    t: "NVIDIA GTC 2026 Post Keynote Reaction",
+                    s: "x.com",
+                    tm: "1d",
+                    tags: ["ai-tools"],
+                    aud: "ready",
+                    dur: 220,
+                    body: "Patrick Moorhead on Jensen Huang's GTC 2026 keynote. Blackwell Ultra, NVLink 7.0, Rubin architecture.",
+                },
+                {
+                    id: 9,
+                    t: "The West wasted Ukraine's years of sacrifice",
+                    s: "Pasted",
+                    tm: "1d",
+                    tags: ["geopolitics"],
+                    aud: "ready",
+                    dur: 620,
+                    body: "Western hesitation squandered the strategic advantages Ukraine built through three years of resistance.",
+                },
+                {
+                    id: 10,
+                    t: "Rise of the AI Soldiers",
+                    s: "Pasted",
+                    tm: "1d",
+                    tags: ["geopolitics", "mil-tech"],
+                    aud: "ready",
+                    dur: 540,
+                    body: "Investigation into autonomous weapons: drone swarms, AI-guided targeting, erosion of human-in-the-loop.",
+                },
+                {
+                    id: 11,
+                    t: "Are we in the foothills of World War 3?",
+                    s: "Pasted",
+                    tm: "1d",
+                    tags: ["geopolitics"],
+                    aud: "none",
+                    dur: 0,
+                    body: "Whether current tensions — Iran, Ukraine, Taiwan, Arctic — constitute early stages of systemic conflict.",
+                },
+                {
+                    id: 12,
+                    t: "The Art of Doing Science and Engineering",
+                    s: "Pasted",
+                    tm: "2d",
+                    tags: ["reading"],
+                    aud: "ready",
+                    dur: 2400,
+                    body: "Hamming's classic on research methodology and transformative habits of mind.",
+                },
+                {
+                    id: 13,
+                    t: "HCR — March 21, 2026",
+                    s: "Substack",
+                    tm: "2d",
+                    tags: ["geopolitics"],
+                    aud: "ready",
+                    dur: 380,
+                    body: "Heather Cox Richardson on American politics and institutional norms.",
+                },
+            ];
+
+            const TS = {
+                "ai-tools": `background:var(--abg);color:var(--acc)`,
+                "ai-research": `background:var(--tbg);color:var(--teal)`,
+                email: `background:var(--gbg);color:var(--grn)`,
+                geopolitics: `background:var(--rbg);color:var(--red)`,
+                "mil-tech": `background:var(--ambg);color:var(--amb)`,
+                reading: `background:var(--pbg);color:var(--pur)`,
+            };
+
+            let lists = [
+                {
+                    id: "l1",
+                    name: "Respond To",
+                    icon: "✉",
+                    color: "var(--amb)",
+                    bg: "var(--ambg)",
+                    type: "todo",
+                    items: [
+                        {
+                            docId: 5,
+                            due: "2026-03-27",
+                            done: false,
+                            aiDue: true,
+                        },
+                        { docId: 8, due: "2026-03-30", done: false },
+                    ],
+                },
+                {
+                    id: "l2",
+                    name: "Study Psychology",
+                    icon: "🧠",
+                    color: "var(--pur)",
+                    bg: "var(--pbg)",
+                    type: "collection",
+                    items: [{ docId: 4 }, { docId: 6 }],
+                },
+                {
+                    id: "l3",
+                    name: "Geopolitics Deep Dive",
+                    icon: "🌍",
+                    color: "var(--red)",
+                    bg: "var(--rbg)",
+                    type: "collection",
+                    items: [
+                        { docId: 7 },
+                        { docId: 9 },
+                        { docId: 10 },
+                        { docId: 11 },
+                        { docId: 13 },
+                    ],
+                },
+                {
+                    id: "l4",
+                    name: "Morning Commute",
+                    icon: "🎧",
+                    color: "var(--acc)",
+                    bg: "var(--abg)",
+                    type: "playlist",
+                    items: [
+                        { docId: 9 },
+                        { docId: 7 },
+                        { docId: 10 },
+                        { docId: 12 },
+                        { docId: 13 },
+                    ],
+                },
+                {
+                    id: "l5",
+                    name: "AI Tools to Evaluate",
+                    icon: "⚡",
+                    color: "var(--teal)",
+                    bg: "var(--tbg)",
+                    type: "collection",
+                    items: [{ docId: 3 }, { docId: 8 }],
+                },
+                {
+                    id: "l6",
+                    name: "Weekend Deep Reads",
+                    icon: "📖",
+                    color: "var(--pur)",
+                    bg: "var(--pbg)",
+                    type: "playlist",
+                    items: [{ docId: 4 }, { docId: 6 }, { docId: 12 }],
+                },
+            ];
+
+            // App state
+            let S = {
+                activeNav: "all",
+                sel: 1,
+                drawer: false,
+                navCollapsed: false,
+                lkOpen: true, // Local Knowledge section open
+                player: { playlistId: "l4", idx: 0, playing: true, pos: 222 },
+                sections: { action: true, lists: true },
+                atpOpen: null, // {docId, x, y}
+            };
+
+            function fmtDur(s) {
+                if (!s) return "--:--";
+                const m = Math.floor(s / 60),
+                    ss = s % 60;
+                return m + ":" + (ss < 10 ? "0" : "") + ss;
+            }
+            function docTags(d) {
+                return d.tags
+                    .map(
+                        (t) =>
+                            `<span class="tag" style="${TS[t] || ""}">${t}</span>`,
+                    )
+                    .join("");
+            }
+            function docInList(did, lid) {
+                const l = lists.find((x) => x.id === lid);
+                return l ? l.items.some((i) => i.docId === did) : false;
+            }
+            function docLists(d) {
+                return lists
+                    .filter((l) => l.items.some((i) => i.docId === d.id))
+                    .map(
+                        (l) =>
+                            `<span class="lbadge" style="background:${l.bg};color:${l.color}">${l.icon} ${l.name}</span>`,
+                    )
+                    .join(" ");
+            }
+            function getPlaylist() {
+                return S.player.playlistId
+                    ? lists.find((l) => l.id === S.player.playlistId)
+                    : null;
+            }
+            function nowPlaying() {
+                const pl = getPlaylist();
+                if (!pl) return null;
+                const item = pl.items[S.player.idx];
+                return item ? D.find((d) => d.id === item.docId) : null;
+            }
+
+            function audIconHTML(d) {
+                if (d.aud === "ready")
+                    return `<div class="aud-icon ready" title="${fmtDur(d.dur)}" onclick="event.stopPropagation();playNow(${d.id})">♫<div class="hover-play">▶</div></div>`;
+                if (d.aud === "gen") return `<div class="aud-icon gen">◌</div>`;
+                return `<div class="aud-icon">♪</div>`;
+            }
+
+            // ===== RENDER =====
+            function render() {
+                const el = document.getElementById("app");
+                const pl = getPlaylist();
+                const np = nowPlaying();
+                const isPlaylistView =
+                    S.activeNav.startsWith("l") &&
+                    lists.find((l) => l.id === S.activeNav)?.type ===
+                        "playlist";
+
+                // === NAV ===
+                // Mini rail when collapsed
+                let rail = S.navCollapsed
+                    ? `<div class="nav-rail">
+    <button class="rail-btn" onclick="S.navCollapsed=false;render()" title="Expand sidebar">☰</button>
+    <div style="height:1px;width:20px;background:var(--br2);margin:4px 0"></div>
+    <button class="rail-btn" style="${S.activeNav === "all" ? "color:var(--acc);background:var(--abg)" : ""}" onclick="go('all')" title="All items">⊙</button>
+    ${lists.map((l) => `<button class="rail-btn" style="${S.activeNav === l.id ? "color:" + l.color + ";background:" + l.bg : ""}" onclick="go('${l.id}')" title="${l.name}">${l.icon}</button>`).join("")}
+  </div>`
+                    : "";
+
+                let nav = `${rail}<div class="nav ${S.navCollapsed ? "collapsed" : ""}">
+    <div class="nh"><span class="dot"></span><span>Local Knowledge</span><button class="nav-toggle" onclick="S.navCollapsed=true;render()" title="Collapse sidebar" style="margin-left:auto">◂</button></div>`;
+
+                // All items (under collapsible Local Knowledge)
+                nav += `<div class="nsec">
+    <div class="nsec-head ${S.lkOpen ? "" : "closed"}" onclick="S.lkOpen=!S.lkOpen;render()">
+      <span class="chev">▼</span>Knowledge base
+    </div>
+    <div class="nsec-body ${S.lkOpen ? "" : "closed"}" style="max-height:400px">
+      <div class="ni ${S.activeNav === "all" ? "on" : ""}" onclick="go('all')"><span class="ic">⊙</span><span class="lb">All items</span><span class="ct">${D.length}</span></div>
+    </div>
+  </div>`;
+
+                // Action items
+                const todos = lists.filter((l) => l.type === "todo");
+                if (todos.length) {
+                    nav += `<div class="nsep"></div><div class="nsec">
+      <div class="nsec-head ${S.sections.action ? "" : "closed"}" onclick="S.sections.action=!S.sections.action;render()">
+        <span class="chev">▼</span>Action items
+      </div>
+      <div class="nsec-body ${S.sections.action ? "" : "closed"}" style="max-height:400px">`;
+                    todos.forEach((l) => {
+                        const undone = l.items.filter((i) => !i.done).length;
+                        nav += `<div class="ni ${S.activeNav === l.id ? "on" : ""}" onclick="go('${l.id}')" style="${S.activeNav === l.id ? "color:" + l.color : ""}">
+        <span class="ic">${l.icon}</span><span class="lb">${l.name}</span>
+        <span class="tp" style="background:${l.bg};color:${l.color}">☐</span>
+        ${undone ? `<span class="ct">${undone}</span>` : ""}
+      </div>`;
+                    });
+                    nav += `</div></div>`;
+                }
+
+                // Lists (collections + playlists)
+                const others = lists.filter(
+                    (l) => l.type === "collection" || l.type === "playlist",
+                );
+                nav += `<div class="nsep"></div><div class="nsec">
+    <div class="nsec-head ${S.sections.lists ? "" : "closed"}" onclick="S.sections.lists=!S.sections.lists;render()">
+      <span class="chev">▼</span>Lists
+    </div>
+    <div class="nsec-body ${S.sections.lists ? "" : "closed"}" style="max-height:600px">`;
+                others.forEach((l) => {
+                    const isPlaying =
+                        S.player.playlistId === l.id && S.player.playing;
+                    nav += `<div class="ni ${S.activeNav === l.id ? "on" : ""}" onclick="go('${l.id}')" style="${S.activeNav === l.id ? "color:" + l.color : ""}">
+      <span class="ic">${l.icon}</span><span class="lb">${l.name}</span>
+      ${isPlaying ? '<span class="playing-dot"></span>' : ""}
+      <span class="tp" style="background:${l.bg};color:${l.color}">${l.type === "playlist" ? "♫" : "◎"}</span>
+      <span class="ct">${l.items.length}</span>
+    </div>`;
+                });
+                nav += `</div></div>`;
+
+                nav += `<div class="nadd" onclick="alert('Create list modal')"><span class="ic" style="font-size:14px">+</span>New list</div>`;
+                nav += `<div class="nav-footer"><kbd>↑↓</kbd> navigate <kbd>⏎</kbd> open<br><kbd>q</kbd> queue <kbd>e</kbd> done <kbd>n</kbd> narrate<br><kbd>[</kbd> toggle sidebar</div>`;
+                nav += `</div>`;
+
+                // === CENTER ===
+                let center = `<div class="center">`;
+
+                if (isPlaylistView) {
+                    const pvl = lists.find((l) => l.id === S.activeNav);
+                    const isActive = S.player.playlistId === pvl.id;
+                    const totalDur = pvl.items.reduce((s, i) => {
+                        const d = D.find((x) => x.id === i.docId);
+                        return s + (d?.dur || 0);
+                    }, 0);
+                    const missing = pvl.items.filter((i) => {
+                        const d = D.find((x) => x.id === i.docId);
+                        return d.aud !== "ready";
+                    });
+
+                    // Hero
+                    center += `<div class="pl-hero"><div class="pl-hero-top">
+      <div class="pl-art">${pvl.icon}</div>
+      <div class="pl-info"><div class="pl-name">${pvl.name}</div><div class="pl-stats">${pvl.items.length} items · ${fmtDur(totalDur)}</div></div>
+      <button class="btn btn-acc" style="padding:7px 16px" onclick="loadPlaylist('${pvl.id}')">▶ Play all</button>
+    </div>`;
+                    if (isActive && np) {
+                        center += `<div class="pl-np-label">Now playing</div>
+        <div class="pl-np-title">${np.t}</div>
+        <div class="pl-transport">
+          <button class="bb-btn bb-skip" onclick="prev()">⏮</button>
+          <button class="bb-btn bb-play" style="width:32px;height:32px;font-size:12px" onclick="togglePlay()">▶</button>
+          <button class="bb-btn bb-skip" onclick="next()">⏭</button>
+          <div class="pl-progress"><div class="pl-fill" style="width:${np.dur ? (S.player.pos / np.dur) * 100 : 0}%"></div></div>
+          <span style="font-size:10px;color:var(--t4);font-family:'JetBrains Mono',monospace">${fmtDur(Math.round(S.player.pos))} / ${fmtDur(np.dur)}</span>
+        </div>`;
+                    }
+                    center += `</div>`;
+
+                    // Missing narration banner
+                    if (missing.length)
+                        center += `<div class="bbanner">⚠ ${missing.length} item${missing.length > 1 ? "s" : ""} need narration <button class="btn btn-sm" style="margin-left:auto;color:var(--amb);border-color:rgba(239,159,39,0.3)" onclick="batchNarrate('${pvl.id}')">Generate all</button></div>`;
+
+                    // Queue list
+                    center += `<div style="padding:5px 12px;border-bottom:1px solid var(--br2);font-size:9px;color:var(--t4);display:flex"><span>TRACKLIST</span><span style="flex:1"></span><span>Drag to reorder</span></div>`;
+                    center += `<div class="dlist">`;
+                    pvl.items.forEach((item, i) => {
+                        const d = D.find((x) => x.id === item.docId);
+                        const isP = isActive && i === S.player.idx;
+                        center += `<div class="plr ${S.sel === d.id ? "sel" : ""} ${isP ? "playing" : ""}" data-drag-item="${i}" draggable="true" ondragstart="dragStart(event,'${pvl.id}',${i})" ondragover="dragOver(event,${i})" ondragend="dragEnd(event)" ondrop="drop(event,'${pvl.id}',${i})" onclick="S.sel=${d.id};render()">
+        <span class="plnum">${isP ? "▶" : i + 1}</span>
+        <span class="grip">⠿</span>
+        <span class="plstate ${d.aud === "ready" ? "ready" : d.aud === "gen" ? "genst" : "miss"}">${d.aud === "ready" ? "♫" : d.aud === "gen" ? "◌" : "✕"}</span>
+        <div class="dc" style="flex:1;min-width:0"><div class="dt" style="${isP ? "font-weight:600" : ""}">${d.t}</div><div class="dm">${docTags(d)} <span>${d.s}</span></div></div>
+        <span class="pldur">${fmtDur(d.dur)}</span>
+        <span class="plrm" onclick="event.stopPropagation();rmFromList('${pvl.id}',${d.id})">×</span>
+      </div>`;
+                    });
+                    center += `</div>`;
+                } else {
+                    // Normal doc list
+                    const list =
+                        S.activeNav === "all"
+                            ? null
+                            : lists.find((l) => l.id === S.activeNav);
+                    const docs = list
+                        ? list.items
+                              .map((i) => D.find((d) => d.id === i.docId))
+                              .filter(Boolean)
+                        : D;
+                    const label = list ? list.name : "All Items";
+
+                    center += `<div class="ch"><span class="chi" style="${list ? "color:" + list.color : ""}">${list ? list.icon : "⊙"}</span><span class="cht">${label}</span><span class="chb" style="background:var(--abg);color:var(--acc)">${docs.length}</span>
+      ${list?.type === "collection" ? `<button class="btn btn-sm" style="margin-left:auto;color:var(--pur);border-color:rgba(168,85,247,0.3)">⚡ Spock</button>` : ""}
+    </div>`;
+                    center += `<div class="csearch"><input placeholder="Search${list ? " " + label : ""}..."></div>`;
+                    center += `<div class="dlist">`;
+                    docs.forEach((d) => {
+                        const inQ = pl
+                            ? pl.items.some((i) => i.docId === d.id)
+                            : false;
+                        center += `<div class="dr ${S.sel === d.id ? "sel" : ""}" onclick="S.sel=${d.id};render()">
+        ${audIconHTML(d)}
+        <div class="dc"><div class="dt">${d.t}</div><div class="dm">${docTags(d)} <span>${d.s} · ${d.tm}</span></div>
+          ${S.activeNav === "all" && docLists(d) ? `<div class="dbadges">${docLists(d)}</div>` : ""}
+        </div>
+        <div class="dacts">
+          ${d.aud === "ready" ? `<button class="da" onclick="event.stopPropagation();playNow(${d.id})"><span class="da-tip">Play now</span>▶</button>` : ""}
+          ${d.aud === "ready" ? `<button class="da ${inQ ? "inq" : ""}" onclick="event.stopPropagation();addToQueue(${d.id})"><span class="da-tip">${inQ ? "In queue" : "Add to queue"}</span>${inQ ? "☑" : "⊕"}</button>` : ""}
+          <button class="da" onclick="event.stopPropagation();showATP(event,${d.id})"><span class="da-tip">Add to list</span>☰</button>
+        </div>
+      </div>`;
+                    });
+                    center += `</div>`;
+                }
+                center += `</div>`;
+
+                // === DETAIL ===
+                const doc = D.find((x) => x.id === S.sel);
+                const inQ = pl
+                    ? pl.items.some((i) => i.docId === doc.id)
+                    : false;
+                let det = `<div class="detail-wrap"><div class="detail">
+    <div class="det-hdr">
+      <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">${docTags(doc)} ${docLists(doc)}</div>
+      <div class="det-title">${doc.t}</div>
+      <div class="det-meta"><span>${doc.s}</span><span>·</span><span>${doc.tm}</span>${doc.dur ? `<span>·</span><span>${fmtDur(doc.dur)}</span>` : ""}</div>
+    </div>
+    <div class="rbar">
+      <span class="rb-st ${doc.aud === "ready" ? "ready" : doc.aud === "gen" ? "gen" : "none"}">♫ ${doc.aud === "ready" ? "Audio · " + fmtDur(doc.dur) : doc.aud === "gen" ? "Generating..." : "No audio"}</span>
+      ${
+          doc.aud === "ready"
+              ? `
+        <button class="btn-play" onclick="playNow(${doc.id})" title="Play now">▶</button>
+        <div class="split">
+          <button class="btn btn-sm" onclick="addToQueue(${doc.id})">${inQ ? "✓ Queued" : "+ Queue"}</button>
+          <button class="btn btn-sm" style="color:var(--acc)" onclick="showPlaylistPicker(event,${doc.id})">🎧 ▾</button>
+        </div>
+      `
+              : `${doc.aud !== "gen" ? `<button class="btn btn-sm btn-acc">Generate narration</button>` : ""}`
+      }
+      <span style="flex:1"></span>
+      <button class="btn btn-sm btn-ghost" style="color:var(--t4)">📝 Summary</button>
+    </div>
+    <div class="det-lists"><span style="font-size:9px;color:var(--t4);margin-right:4px">Lists:</span>
+      ${lists
+          .map((l) => {
+              const inL = docInList(doc.id, l.id);
+              return `<button class="la ${inL ? "in" : ""}" style="${inL ? `border-color:${l.color};color:${l.color};background:${l.bg}` : "color:var(--t3)"}" onclick="toggleDocInList(${doc.id},'${l.id}')">${l.icon} ${inL ? "✓ " : "+ "}${l.name}</button>`;
+          })
+          .join("")}
+    </div>
+    <div class="det-body"><p style="margin-bottom:12px">${doc.body || "Document content renders here."}</p></div>
+  </div>`;
+
+                // DRAWER
+                if (pl) {
+                    const allPlaylists = lists.filter(
+                        (l) => l.type === "playlist",
+                    );
+                    const totalDur = pl.items.reduce((s, i) => {
+                        const d = D.find((x) => x.id === i.docId);
+                        return s + (d?.dur || 0);
+                    }, 0);
+                    det += `<div class="drawer ${S.drawer ? "open" : ""}">
+      <div class="dw-head">
+        <select style="background:transparent;border:none;color:var(--t1);font-size:12px;font-weight:600;font-family:inherit;outline:none;cursor:pointer;max-width:140px;appearance:none;-webkit-appearance:none;padding-right:12px;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22><path d=%221 1 5 5 9 1%22 fill=%22none%22 stroke=%22%236b7084%22 stroke-width=%221.5%22/></svg>');background-repeat:no-repeat;background-position:right center" onchange="switchDrawerPlaylist(this.value)">
+          ${allPlaylists.map((p) => `<option value="${p.id}" ${p.id === pl.id ? "selected" : ""}>${p.icon} ${p.name}</option>`).join("")}
+        </select>
+        <span class="dw-dur">${pl.items.length} · ${fmtDur(totalDur)}</span>
+        <span style="flex:1"></span>
+        <button class="dw-close" onclick="S.drawer=false;render()">✕</button>
+      </div>
+      <div class="dw-list">`;
+                    pl.items.forEach((item, i) => {
+                        const qd = D.find((x) => x.id === item.docId);
+                        const isP = i === S.player.idx;
+                        det += `<div class="dw-item ${isP ? "playing" : ""}" data-drag-item="${i}" draggable="true" ondragstart="dragStart(event,'${pl.id}',${i})" ondragover="dragOver(event,${i})" ondragend="dragEnd(event)" ondrop="drop(event,'${pl.id}',${i})" onclick="S.sel=${qd.id};render()">
+        <span class="dwi-num">${isP ? "▶" : i + 1}</span>
+        <span class="dwi-grip">⠿</span>
+        <span class="dwi-title">${qd.t}</span>
+        <span class="dwi-dur">${fmtDur(qd.dur)}</span>
+        <span class="dwi-rm" onclick="event.stopPropagation();rmFromList('${pl.id}',${qd.id})">×</span>
+      </div>`;
+                    });
+                    det += `</div>
+      <div class="dw-foot">
+        <button class="btn btn-sm" style="flex:1;justify-content:center" onclick="addToQueue(${doc.id})">+ Add current doc</button>
+      </div>
+    </div>`;
+                }
+                det += `</div>`;
+
+                // === BOTTOM BAR ===
+                let bbar = "";
+                if (np) {
+                    bbar = `<div class="bbar">
+      <div class="bb-transport">
+        <button class="bb-btn bb-skip" onclick="prev()">⏮</button>
+        <button class="bb-btn bb-play" onclick="togglePlay()">${S.player.playing ? "▐▐" : "▶"}</button>
+        <button class="bb-btn bb-skip" onclick="next()">⏭</button>
+      </div>
+      <div class="bb-info">
+        <div class="bb-title">${np.t}</div>
+        <div class="bb-sub"><span class="bb-pl" onclick="go('${S.player.playlistId}')">${pl.icon} ${pl.name}</span><span>· ${S.player.idx + 1}/${pl.items.length}</span></div>
+        <div class="bb-progress" onclick="seekTo(event,this)"><div class="bb-fill" style="width:${np.dur ? (S.player.pos / np.dur) * 100 : 0}%"></div></div>
+      </div>
+      <span class="bb-time">${fmtDur(Math.round(S.player.pos))} / ${fmtDur(np.dur)}</span>
+      <button class="bb-qbtn ${S.drawer ? "open" : ""}" onclick="S.drawer=!S.drawer;render()" title="Queue">≡</button>
+    </div>`;
+                }
+
+                el.innerHTML = nav + center + det;
+                document.getElementById("bbar-container").innerHTML = bbar;
+
+                // Render ATP popover if open
+                if (S.atpOpen) renderATP();
+            }
+
+            // ===== ACTIONS =====
+            function go(id) {
+                S.activeNav = id;
+                const list =
+                    id === "all" ? null : lists.find((l) => l.id === id);
+                const docs = list
+                    ? list.items.map((i) => D.find((d) => d.id === i.docId))
+                    : D;
+                if (docs.length) S.sel = docs[0].id;
+                render();
+            }
+
+            function playNow(docId) {
+                const pl = getPlaylist();
+                if (!pl) return;
+                const idx = pl.items.findIndex((i) => i.docId === docId);
+                if (idx >= 0) {
+                    S.player.idx = idx;
+                    S.player.pos = 0;
+                    S.player.playing = true;
+                } else {
+                    pl.items.splice(S.player.idx + 1, 0, { docId });
+                    S.player.idx++;
+                    S.player.pos = 0;
+                    S.player.playing = true;
+                }
+                render();
+            }
+
+            function addToQueue(docId) {
+                const pl = getPlaylist();
+                if (!pl) return;
+                if (!pl.items.some((i) => i.docId === docId)) {
+                    pl.items.push({ docId });
+                }
+                render();
+            }
+
+            function rmFromList(lid, docId) {
+                const l = lists.find((x) => x.id === lid);
+                const idx = l.items.findIndex((i) => i.docId === docId);
+                if (idx >= 0) {
+                    l.items.splice(idx, 1);
+                    if (
+                        S.player.playlistId === lid &&
+                        S.player.idx >= l.items.length
+                    )
+                        S.player.idx = Math.max(0, l.items.length - 1);
+                }
+                render();
+            }
+
+            function toggleDocInList(docId, lid) {
+                const l = lists.find((x) => x.id === lid);
+                const idx = l.items.findIndex((i) => i.docId === docId);
+                if (idx >= 0) {
+                    l.items.splice(idx, 1);
+                } else {
+                    const d = D.find((x) => x.id === docId);
+                    if (l.type === "playlist" && d.aud !== "ready") {
+                        alert(
+                            `"${d.t}" needs audio narration before adding to playlist.`,
+                        );
+                        return;
+                    }
+                    const item = { docId };
+                    if (l.type === "todo") {
+                        item.done = false;
+                        item.due = null;
+                    }
+                    l.items.push(item);
+                }
+                render();
+            }
+
+            function loadPlaylist(lid) {
+                S.player.playlistId = lid;
+                S.player.idx = 0;
+                S.player.pos = 0;
+                S.player.playing = true;
+                render();
+            }
+            function switchDrawerPlaylist(lid) {
+                S.player.playlistId = lid;
+                S.player.idx = 0;
+                S.player.pos = 0;
+                render();
+            }
+            function next() {
+                const pl = getPlaylist();
+                if (pl)
+                    S.player.idx = Math.min(
+                        S.player.idx + 1,
+                        pl.items.length - 1,
+                    );
+                S.player.pos = 0;
+                render();
+            }
+            function prev() {
+                S.player.idx = Math.max(S.player.idx - 1, 0);
+                S.player.pos = 0;
+                render();
+            }
+            function togglePlay() {
+                S.player.playing = !S.player.playing;
+                render();
+            }
+            function seekTo(e, bar) {
+                const rect = bar.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width;
+                const np = nowPlaying();
+                if (np) S.player.pos = pct * np.dur;
+                render();
+            }
+
+            // Drag-and-drop reorder
+            let dragState = { listId: null, fromIdx: null };
+            function dragStart(e, listId, idx) {
+                dragState = { listId, fromIdx: idx };
+                e.dataTransfer.effectAllowed = "move";
+                e.target.closest("[data-drag-item]").style.opacity = "0.3";
+            }
+            function dragOver(e, idx) {
+                e.preventDefault();
+                document
+                    .querySelectorAll("[data-drag-item]")
+                    .forEach((el) => (el.style.borderTop = ""));
+                const target = e.target.closest("[data-drag-item]");
+                if (target) target.style.borderTop = "2px solid var(--acc)";
+            }
+            function dragEnd(e) {
+                e.target.closest("[data-drag-item]") &&
+                    (e.target.closest("[data-drag-item]").style.opacity = "1");
+                document.querySelectorAll("[data-drag-item]").forEach((el) => {
+                    el.style.borderTop = "";
+                    el.style.opacity = "1";
+                });
+            }
+            function drop(e, listId, toIdx) {
+                e.preventDefault();
+                document.querySelectorAll("[data-drag-item]").forEach((el) => {
+                    el.style.borderTop = "";
+                    el.style.opacity = "1";
+                });
+                if (dragState.listId !== listId) return;
+                const l = lists.find((x) => x.id === listId);
+                const from = dragState.fromIdx;
+                if (from === toIdx || from == null) return;
+                const [item] = l.items.splice(from, 1);
+                l.items.splice(toIdx > from ? toIdx - 1 : toIdx, 0, item);
+                // Adjust player index if this is the active playlist
+                if (S.player.playlistId === listId) {
+                    const oldIdx = S.player.idx;
+                    if (from === oldIdx) {
+                        S.player.idx = toIdx > from ? toIdx - 1 : toIdx;
+                    } else if (from < oldIdx && toIdx > oldIdx) {
+                        S.player.idx--;
+                    } else if (from > oldIdx && toIdx <= oldIdx) {
+                        S.player.idx++;
+                    }
+                }
+                dragState = { listId: null, fromIdx: null };
+                render();
+            }
+
+            function batchNarrate(lid) {
+                const l = lists.find((x) => x.id === lid);
+                l.items.forEach((item) => {
+                    const d = D.find((x) => x.id === item.docId);
+                    if (d.aud !== "ready") {
+                        d.aud = "gen";
+                        setTimeout(
+                            () => {
+                                d.aud = "ready";
+                                d.dur = Math.floor(Math.random() * 400 + 60);
+                                render();
+                            },
+                            Math.random() * 2000 + 500,
+                        );
+                    }
+                });
+                render();
+            }
+
+            // Add-to-playlist popover
+            function showATP(event, docId) {
+                event.stopPropagation();
+                S.atpOpen = { docId, x: event.clientX, y: event.clientY };
+                render();
+            }
+
+            function renderATP() {
+                const old = document.querySelector(".atp");
+                if (old) old.remove();
+                if (!S.atpOpen) return;
+                const { docId, x, y } = S.atpOpen;
+                const d = D.find((dd) => dd.id === docId);
+                const pop = document.createElement("div");
+                pop.className = "atp";
+                pop.style.left = Math.min(x, window.innerWidth - 200) + "px";
+                pop.style.top = Math.min(y, window.innerHeight - 200) + "px";
+                let h = `<div class="atp-item" style="color:var(--t4);font-size:10px;pointer-events:none;padding:4px 10px">Add "${d.t.substring(0, 30)}..." to:</div><div class="atp-sep"></div>`;
+                lists.forEach((l) => {
+                    const inL = l.items.some((i) => i.docId === docId);
+                    const needsAudio =
+                        l.type === "playlist" && d.aud !== "ready";
+                    h += `<div class="atp-item ${inL ? "inq" : ""}" onclick="event.stopPropagation();toggleDocInList(${docId},'${l.id}');closeATP()">
+      <span class="api" style="color:${l.color}">${l.icon}</span>
+      <span>${l.name}</span>
+      ${needsAudio ? '<span style="font-size:8px;color:var(--amb);margin-left:auto">needs audio</span>' : ""}
+      ${inL ? '<span class="chk">✓</span>' : ""}
+    </div>`;
+                });
+                pop.innerHTML = h;
+                document.body.appendChild(pop);
+                setTimeout(
+                    () =>
+                        document.addEventListener("click", function h() {
+                            closeATP();
+                            document.removeEventListener("click", h);
+                        }),
+                    10,
+                );
+            }
+
+            function closeATP() {
+                S.atpOpen = null;
+                const p = document.querySelector(".atp");
+                if (p) p.remove();
+            }
+
+            function showPlaylistPicker(event, docId) {
+                event.stopPropagation();
+                const d = D.find((dd) => dd.id === docId);
+                const playlists = lists.filter((l) => l.type === "playlist");
+                const pop = document.createElement("div");
+                pop.className = "atp";
+                pop.style.left =
+                    Math.min(event.clientX, window.innerWidth - 210) + "px";
+                pop.style.top =
+                    Math.min(event.clientY, window.innerHeight - 200) + "px";
+                let h = `<div class="atp-item" style="color:var(--t4);font-size:10px;pointer-events:none;padding:4px 10px">Add to playlist:</div><div class="atp-sep"></div>`;
+                playlists.forEach((l) => {
+                    const inL = l.items.some((i) => i.docId === docId);
+                    const needsAudio = d.aud !== "ready";
+                    h += `<div class="atp-item ${inL ? "inq" : ""}" onclick="event.stopPropagation();toggleDocInList(${docId},'${l.id}');this.closest('.atp').remove()">
+      <span class="api" style="color:${l.color}">${l.icon}</span>
+      <span>${l.name}</span>
+      ${needsAudio ? '<span style="font-size:8px;color:var(--amb);margin-left:auto">needs audio</span>' : ""}
+      ${inL ? '<span class="chk">✓</span>' : ""}
+    </div>`;
+                });
+                h += `<div class="atp-sep"></div><div class="atp-item" style="color:var(--t4)" onclick="alert('Create playlist modal')"><span class="api">+</span>New playlist</div>`;
+                pop.innerHTML = h;
+                document.body.appendChild(pop);
+                setTimeout(
+                    () =>
+                        document.addEventListener("click", function handler() {
+                            pop.remove();
+                            document.removeEventListener("click", handler);
+                        }),
+                    10,
+                );
+            }
+
+            // Keyboard
+            document.addEventListener("keydown", (e) => {
+                if (e.target.tagName === "INPUT") return;
+                const list =
+                    S.activeNav === "all"
+                        ? null
+                        : lists.find((l) => l.id === S.activeNav);
+                const isPlaylist = list?.type === "playlist";
+                const ids = isPlaylist
+                    ? list.items.map((i) => i.docId)
+                    : list
+                      ? list.items.map((i) => i.docId)
+                      : D.map((d) => d.id);
+                const cur = ids.indexOf(S.sel);
+                if (e.key === "ArrowDown" || e.key === "j") {
+                    e.preventDefault();
+                    S.sel = ids[Math.min(cur + 1, ids.length - 1)];
+                    render();
+                    document
+                        .querySelector(".dr.sel,.plr.sel")
+                        ?.scrollIntoView({ block: "nearest" });
+                }
+                if (e.key === "ArrowUp" || e.key === "k") {
+                    e.preventDefault();
+                    S.sel = ids[Math.max(cur - 1, 0)];
+                    render();
+                    document
+                        .querySelector(".dr.sel,.plr.sel")
+                        ?.scrollIntoView({ block: "nearest" });
+                }
+                if (e.key === "n") {
+                    const d = D.find((x) => x.id === S.sel);
+                    if (d && d.aud !== "ready") {
+                        d.aud = "gen";
+                        render();
+                        setTimeout(() => {
+                            d.aud = "ready";
+                            d.dur = Math.floor(Math.random() * 400 + 60);
+                            render();
+                        }, 1500);
+                    }
+                }
+                if (e.key === "/") {
+                    e.preventDefault();
+                    document.querySelector(".csearch input")?.focus();
+                }
+                if (e.key === "[") {
+                    S.navCollapsed = !S.navCollapsed;
+                    render();
+                }
+                const num = parseInt(e.key);
+                if (num >= 1 && num <= 9) {
+                    const all = ["all", ...lists.map((l) => l.id)];
+                    if (num <= all.length) go(all[num - 1]);
+                }
+            });
+
+            render();
+        </script>
+    </body>
+</html>

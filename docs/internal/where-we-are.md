@@ -1,110 +1,137 @@
-# Local Knowledge — Where We Are
+# Where We Are — 2026-03-25
 
-## What This Is
+## Project Overview
 
-A local-first knowledge management platform that stores documents, embeds them for semantic search, and provides hybrid search (FTS + embeddings). Runs entirely on-device using MLX on Apple Silicon. No cloud dependencies.
+Local Knowledge is a macOS Apple Silicon app for personal knowledge management with TTS narration. Two repos:
 
-There's also a sibling project, **Readcast** (at `../transcriber/`), that turns web articles into podcast audio. Readcast uses Local Knowledge as its core storage and search layer.
+- **local-knowledge** (`/Users/greg/Documents/dev/local-knowledge`) — monorepo: core, cli, ui, mcp, desktop (menu bar), app (Tauri). Published to anaconda.org/gjennings as `local-knowledge` v0.4.0.
+- **readcast** (`/Users/greg/Documents/dev/transcriber`) — article capture, TTS synthesis, web UI. Published as `readcast` v0.2.0.
 
-## Architecture
+Both share `~/.localknowledge/store.db` (SQLite). readcast depends on localknowledge-core.
 
-Monorepo with 4 packages:
+## Installation
+
+Single command installs everything:
+```bash
+pixi global install --environment local-knowledge --channel gjennings --channel conda-forge \
+  --expose lk --expose lk-mcp --expose lk-ui --expose lk-desktop \
+  --expose readcast --expose kokoro-edge \
+  local-knowledge readcast
+```
+
+Then `lk-desktop install` sets up launchd for start-on-login. Menu bar app supervises 4 services:
+- kokoro-edge (TTS engine, port 7777)
+- readcast (web UI, port 8765)
+- lk-ui (knowledge base UI, port 8321)
+- lk-mcp (MCP server for Claude, port 8322)
+
+## Current State of the UX Rewrite
+
+We're implementing a major UX overhaul based on the spec at `next-steps-24-mar/spec.md` and the HTML prototype at `next-steps-24-mar/local-knowledge-new-proposed-interface.html`.
+
+### What's Done
+
+**Backend (fully working, 109 tests passing):**
+- `lists` table: user-defined collections, todos, playlists (seeded with 5 test lists)
+- `list_items` join table: docs in lists with position, due dates, done state
+- Renditions system: get/set/clear renditions on document metadata, backwards-compatible with old audio fields
+- API endpoints: lists CRUD, list items CRUD with reorder, renditions (audio/summary/audio_summary), batch narrate
+- Article serialization includes `renditions` and `list_memberships`
+- List items endpoint now enriches articles with `audio_url`, `has_audio`, and `renditions`
+- Tags seeded on documents from `document_tags` table
+
+**Frontend (app.jsx, ~2060 lines — fully implemented):**
+
+All 6 spec steps complete:
+- Three-panel layout: nav (210px) + center (370px) + detail (flex:1)
+- Collapsible nav with icon rail (36px) — `[` key toggles
+- Nav sections: "Knowledge base" with "All items", "Action items" (todos), "Lists" (collections/playlists)
+- Center panel: doc list with audio icons, tag pills, list badges, right-gutter actions
+- Playlist hero view: icon, name, stats, "Play all" + hamburger buttons, tracklist
+- Detail panel: header, rendition bar, list assignment toggles, body text
+- Right drawer (queue controller): 280px slide-in, playlist selector, track list
+- Bottom bar: transport controls, track info, progress bar, queue toggle
+- Audio playback wired to real audio file URLs from renditions
+- Keyboard shortcuts (`[` nav, `]` drawer, Space play/pause, `/` search, arrows navigate)
+- Drag-and-drop reorder in playlist and drawer
+- Popovers for list assignment and playlist picker
+- `data-testid` attributes on ~20 key elements for Playwright testing
+
+**Playwright E2E Tests (54 tests passing):**
+- Layout: three-panel rendering, panel widths, dark background
+- Navigation: list selection, playlist hero, nav collapse/expand, keyboard `[`
+- Article list: rendering, audio icons, tag pills, clicking updates detail
+- Article detail: title, tags, list memberships, body text loading
+- Playlist: hero section, Play All, tracklist, narration banner, now-playing
+- Drawer: open/close, track list, playlist selector, keyboard `]`
+- Player: bottom bar visibility, track title/position, next/prev, audio src, progress bar
+- Keyboard: `[`, `]`, Space, `/`, ArrowDown
+- Search: filtering, clearing, `/` focus
+- Drag-and-drop: handles, draggable items, reorder
+
+### Fixed Issues (this session)
+
+1. **Browser cache bust** — Renamed `bundle.js` to `app.js` to break Brave's aggressive caching of the old bundle. Removed query-string cache bust.
+
+2. **Audio src comparison bug** — Fixed `audio.src !== item.article.audio_url` (absolute vs relative URL mismatch) to use `!audio.src.endsWith(item.article.audio_url)`.
+
+3. **List items missing audio_url** — The `/api/lists/{id}/items` endpoint was returning raw article data without `audio_url` or `renditions`. Fixed to enrich each article with `audio_url`, `has_audio`, and `renditions`.
+
+### Data State
+
+- 23 documents in `~/.localknowledge/store.db`
+- 5 lists seeded: "Respond To" (todo, 4 items), "Study Psychology" (collection, 3), "Geopolitics Deep Dive" (collection, 5), "Morning Commute" (playlist, 5), "AI Tools to Evaluate" (collection, 2)
+- Tags seeded on ~17 documents
+- 19 articles have audio files, 4 don't
+
+### Architecture
 
 ```
-packages/
-  core/     — localknowledge-core: storage, embeddings, search, tags, config
-  cli/      — lk-cli: Click CLI wrapping KnowledgeService
-  ui/       — lk-ui: FastAPI web UI (just built, minimal)
-  readcast/ — readcast-v2: legacy v1→v2 migration compat
+body (flex-direction: column)
+├── #app (display: flex; flex: 1; overflow: hidden)
+│   ├── .nav-rail (36px, only when collapsed)
+│   ├── .nav (210px, collapsible to width:0)
+│   ├── .center (370px, flex column, overflow:hidden)
+│   │   ├── header (flexShrink:0)
+│   │   ├── search (flexShrink:0)
+│   │   └── doc-list (flex:1, overflow-y:auto, minHeight:0)
+│   ├── .detail-wrap (flex:1, display:flex)
+│   │   ├── .detail (flex:1, overflow-y:auto, minWidth:0)
+│   │   └── .drawer (width:0 or 280px, transition)
+├── #bbar-container (flexShrink:0)
+│   └── .bbar (50px, when playlist loaded)
 ```
 
-**Runtime stack:** Python 3.12, SQLite (WAL mode), MLX for embeddings, pixi for env management.
+### Key Files
 
-### Core Layer
-
-`KnowledgeService` is the facade. Everything goes through it:
-
-| Capability | How it works |
+| File | What |
 |---|---|
-| **Storage** | SQLite via `Database` class. Documents, artifacts, tags tables. Migration system (currently v001 initial + v002 chunk embeddings). |
-| **Search (FTS)** | SQLite FTS5 virtual table on title/content/summary. |
-| **Search (Semantic)** | `DenseBackend` embeds text via mlx-embeddings, stores vectors as BLOBs. Cosine similarity at query time. |
-| **Search (Hybrid)** | `HybridSearch` combines FTS + semantic via Reciprocal Rank Fusion (RRF). |
-| **Chunking** | `chunk_text()` splits on paragraph boundaries with overlap. Each chunk gets its own embedding. Search scores per-chunk, aggregates max per document. |
-| **Tags** | Hierarchical tags with confidence scoring. AND/OR intersection queries. |
-| **Config** | TOML at `~/.localknowledge/config.toml`. Sections: database, tts, llm, embeddings. |
+| `transcriber/src/readcast/web/frontend/app.jsx` | React frontend (~2060 lines) |
+| `transcriber/src/readcast/web/static/app.js` | Built bundle (was bundle.js) |
+| `transcriber/src/readcast/core/store.py` | SQLite store: lists, items, renditions |
+| `transcriber/src/readcast/api/app.py` | FastAPI endpoints |
+| `transcriber/src/readcast/services.py` | Business logic + ProcessingWorker |
+| `transcriber/tests/test_api.py` | API tests (109 passing) |
+| `transcriber/tests/e2e/` | Playwright e2e tests (54 passing) |
+| `transcriber/tests/e2e/seed.py` | Test data seeder |
+| `transcriber/playwright.config.ts` | Playwright configuration |
+| `transcriber/scripts/test-server.py` | E2E test server with temp DB |
+| `local-knowledge/next-steps-24-mar/spec.md` | Implementation spec |
+| `local-knowledge/next-steps-24-mar/local-knowledge-new-proposed-interface.html` | Visual prototype |
 
-### Embedding System
+### Running Tests
 
-- **Current model:** `BAAI/bge-small-en-v1.5` (384 dimensions, ~33M params)
-- **Also tested:** `BAAI/bge-large-en-v1.5` (1024 dimensions, ~335M params)
-- Model is configurable via `embeddings.model` in config
-- `DenseBackend` accepts an `embed_fn` callable for testing/swapping
-- Model cache is keyed by model name (can load multiple models simultaneously)
-- Search queries filter by `WHERE model = ?` to prevent mixed-model garbage
-- Schema stores: document_id, chunk_index, chunk_text, chunk_start, chunk_end, embedding (BLOB), model, created_at
+```bash
+# Backend tests (109 passing)
+pixi run test
 
-### What Readcast Uses From Core
-
-Readcast's `embedder.py` is a thin shim that calls core's `DenseBackend.embed_document_chunked()` and `find_similar_by_text()`. Readcast's `store.py` delegates embedding storage to core's `embeddings_dense_v2` table. The old readcast-specific `embeddings` table has been removed.
-
-## Test Coverage
-
-**107 fast tests** (`pixi run test`):
-- Core: 71 tests (documents, tags, embeddings, chunker, service, config, db, artifacts, integration, LLM, TTS)
-- CLI: 28 tests
-- Readcast compat: 8 tests
-
-**17 slow tests** (`pixi run test:slow`, require real MLX model loading):
-- `test_embeddings_real.py` — 3 tests: semantic search groups topics correctly
-- `test_search_quality.py` — 12 tests: 10-doc corpus, similarity/semantic/hybrid/chunk/tag queries
-- `test_model_comparison.py` — 2 tests: BGE-small vs BGE-large side-by-side with MRR/Recall@3 metrics
-
-**72 transcriber tests** (`cd ../transcriber && pixi run test`):
-- Full readcast stack: API, CLI, services, store, embedder, synthesizer, extractor, chunker, config, models
-
-## UI State
-
-`pixi run ui` starts a FastAPI server on port 8321. Single-page vanilla HTML/JS app with:
-- Document browse and search (hybrid/semantic/fts + chunk mode)
-- Document detail view with tags and content
-- Add document form
-- Tag documents
-- Delete documents
-
-It works but is minimal — no auth, no pagination, no real-time updates.
-
-## Model Comparison Results
-
-Ran 5 queries against the 10-document corpus with both models:
-
-```
-Summary: bge-small-en-v1.5 wins 0, bge-large-en-v1.5 wins 0, ties 5
+# E2E tests (54 passing)
+pixi run test:e2e          # headless
+pixi run test:e2e:headed   # watch in browser
 ```
 
-Both models perform identically on straightforward queries. The differences would emerge with harder/ambiguous queries or for tag classification tasks (embedding a tag concept like "energy" and classifying documents against it).
+### Next Steps
 
-## Key Files
-
-| File | Purpose |
-|---|---|
-| `core/src/localknowledge/service.py` | KnowledgeService facade |
-| `core/src/localknowledge/embeddings/dense.py` | DenseBackend — embed, search, model management |
-| `core/src/localknowledge/embeddings/hybrid.py` | HybridSearch — RRF fusion of FTS + semantic |
-| `core/src/localknowledge/chunker.py` | Paragraph-boundary text chunking with overlap |
-| `core/src/localknowledge/documents.py` | DocumentStore — CRUD, FTS5, content-hash dedup |
-| `core/src/localknowledge/tags.py` | TagStore — hierarchical tags, AND/OR queries |
-| `core/src/localknowledge/config.py` | TOML config system |
-| `core/src/localknowledge/db.py` | SQLite connection + migration runner |
-| `core/src/localknowledge/models.py` | Document, SearchResult, ChunkResult dataclasses |
-| `cli/src/lk/cli.py` | Click CLI commands |
-| `ui/src/lk_ui/app.py` | FastAPI web UI |
-| `pixi.toml` | Workspace config, tasks, dependencies |
-
-## What's Not Built Yet
-
-- **Auto-tagging:** User declares a tag concept, system classifies documents against it using embeddings (or LLM for borderline cases). The infrastructure is ready (tags, embeddings, chunk search) but the classification logic doesn't exist.
-- **Ingestion from sources:** Core only supports adding text/files. No web scraping, no RSS, no API integrations. (Readcast has web extraction but it's readcast-specific.)
-- **Document updates/versioning:** Documents are immutable after creation (except soft-delete). No edit-and-re-embed flow in core.
-- **Multi-user / auth:** Everything is single-user local.
-- **Better embedding models:** Tested BGE-small and BGE-large. Haven't explored nomic-embed, GTE, or other model families that might be better for classification tasks.
+1. **Manually verify in Safari** — Open `pixi run start`, confirm scrolling works, drawer toggles, audio plays
+2. Tag and publish next version
+3. Consider adding CI integration for Playwright tests
