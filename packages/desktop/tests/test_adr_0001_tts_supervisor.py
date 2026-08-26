@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from click.testing import CliRunner
 
 from localknowledge.config import Config
 from localknowledge.tts import TTSModelStatus
@@ -116,6 +117,52 @@ def test_health_tick_does_not_restart_tts_during_model_download(monkeypatch, tmp
     assert runtime.stop_calls == 0
     assert state.status == "starting"
     assert state.detail == "Downloading kokoro-82m (10%)"
+
+
+def test_health_discovery_marks_already_running_services_healthy(monkeypatch, tmp_path: Path) -> None:
+    supervisor = _supervisor(tmp_path / ".localknowledge", FakeRuntime(), FakeClient())
+    probes: list[str] = []
+
+    def probe(service) -> bool:
+        probes.append(service.slug)
+        return True
+
+    monkeypatch.setattr(supervisor, "_probe", probe)
+
+    supervisor.check_health(discover_running=True)
+
+    assert probes == [service.slug for service in desktop_app.SERVICES]
+    assert all(state.status == "running" for state in supervisor.states.values())
+
+
+def test_health_tick_does_not_discover_intentionally_stopped_services(monkeypatch, tmp_path: Path) -> None:
+    supervisor = _supervisor(tmp_path / ".localknowledge", FakeRuntime(), FakeClient())
+    monkeypatch.setattr(
+        supervisor,
+        "_probe",
+        lambda _service: pytest.fail("normal health ticks must skip stopped services"),
+    )
+
+    supervisor.check_health()
+
+    assert all(state.status == "stopped" for state in supervisor.states.values())
+
+
+def test_status_command_discovers_services_started_by_another_supervisor(monkeypatch) -> None:
+    calls: list[bool] = []
+    states = {service.slug: ServiceState(status="running") for service in desktop_app.SERVICES}
+    supervisor = SimpleNamespace(
+        states=states,
+        check_health=lambda *, discover_running=False: calls.append(discover_running),
+    )
+    monkeypatch.setattr(desktop_app.Config, "load", lambda: SimpleNamespace(base_dir=Path("/tmp/lk-test")))
+    monkeypatch.setattr(desktop_app, "ProcessSupervisor", lambda _base_dir: supervisor)
+
+    result = CliRunner().invoke(desktop_app.cli, ["status"])
+
+    assert result.exit_code == 0
+    assert calls == [True]
+    assert result.output.count("Running") == len(desktop_app.SERVICES)
 
 
 def test_desktop_populates_menu_before_first_startup_timer(monkeypatch) -> None:

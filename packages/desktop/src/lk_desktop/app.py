@@ -272,7 +272,7 @@ def status():
     """Print service status (no GUI)."""
     config = Config.load()
     supervisor = ProcessSupervisor(config.base_dir)
-    supervisor.check_health()
+    supervisor.check_health(discover_running=True)
 
     for svc in SERVICES:
         state = supervisor.states[svc.slug]

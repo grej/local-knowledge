@@ -162,10 +162,10 @@ class ProcessSupervisor:
 
     # ── Health checks ───────────────────────────────────────────────
 
-    def check_health(self) -> None:
+    def check_health(self, *, discover_running: bool = False) -> None:
         for svc in SERVICES:
             state = self.states[svc.slug]
-            if state.status in ("stopped", "not_found"):
+            if state.status in ("stopped", "not_found") and not discover_running:
                 continue
             if svc.slug == "kokoro-edge" and state.status == "starting":
                 # ensure_running owns this synchronous transition, including a possible model download.
