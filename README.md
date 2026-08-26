@@ -102,9 +102,38 @@ All data lives in `~/.localknowledge/`:
 - `config.toml` — configuration for all products
 - `logs/` — service logs (managed by lk-desktop)
 
+## Local TTS
+
+Local Knowledge and readcast require `kokoro-edge >=0.2.0`. By default the shared TTS
+runtime uses HTTP over a current-user Unix socket rather than a TCP port:
+
+```toml
+[tts]
+transport = "unix"
+socket_path = "~/.localknowledge/run/kokoro-edge.sock"
+```
+
+Inspect the daemon without exposing a local port:
+
+```bash
+curl --fail --unix-socket "$HOME/.localknowledge/run/kokoro-edge.sock" \
+  http://kokoro-edge/v1/status
+curl --fail --unix-socket "$HOME/.localknowledge/run/kokoro-edge.sock" \
+  http://kokoro-edge/v1/voices
+```
+
+The runtime directory is restricted to mode `0700` and the socket to `0600`. Missing,
+stale, unsafe, or permission-denied socket paths are reported; clients never silently
+retry port 7777.
+
+For explicit TCP rollback, set `transport = "tcp"` and
+`server_url = "http://127.0.0.1:7777"`, stop the UDS daemon, and start `kokoro-edge`
+with `--host 127.0.0.1 --port 7777`.
+
 ## Requirements
 
 - macOS 15+, Apple Silicon
+- `kokoro-edge >=0.2.0` for TTS
 
 ## Development
 

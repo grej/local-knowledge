@@ -27,6 +27,7 @@ requirements:
     - hatchling
   run:
     - python >=3.12
+    - kokoro-edge >=0.2.0
     - httpx
     - numpy
     - click >=8.1

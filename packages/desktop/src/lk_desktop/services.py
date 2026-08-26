@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 class ServiceDef:
     slug: str
     display_name: str
-    start_cmd: list[str]
+    start_cmd: list[str] | None
     health_url: str | None = None
     stop_cmd: list[str] | None = None
     web_url: str | None = None
@@ -20,9 +20,9 @@ SERVICES: list[ServiceDef] = [
     ServiceDef(
         slug="kokoro-edge",
         display_name="TTS Engine",
-        start_cmd=["kokoro-edge", "serve"],
-        health_url="http://127.0.0.1:7777/v1/status",
-        stop_cmd=["kokoro-edge", "stop"],
+        start_cmd=None,
+        health_url=None,
+        stop_cmd=None,
     ),
     ServiceDef(
         slug="readcast",

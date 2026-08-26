@@ -38,7 +38,7 @@ ruff = "*"
 mlx-embeddings = { git = "https://github.com/Blaizzy/mlx-embeddings.git" }
 
 [tasks]
-test = { cmd = "pytest packages/core/tests packages/readcast/tests packages/cli/tests packages/mcp/tests -q -m 'not slow'" }
+test = { cmd = "pytest packages/core/tests packages/readcast/tests packages/cli/tests packages/mcp/tests packages/desktop/tests -q -m 'not slow'" }
 "test:slow" = { cmd = "pytest packages/core/tests -q -m slow" }
 lint = { cmd = "ruff check ." }
 lk = "lk"

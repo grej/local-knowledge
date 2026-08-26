@@ -7,10 +7,12 @@ import shutil
 import subprocess
 import time
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
+from localknowledge.config import Config
+from localknowledge.tts import TTSClient, TTSRuntime
 
 from .services import SERVICES, SERVICE_MAP, ServiceDef
 
@@ -32,22 +34,32 @@ class ServiceState:
 
 
 class ProcessSupervisor:
-    def __init__(self, base_dir: Path):
-        self.base_dir = base_dir
-        self.logs_dir = base_dir / "logs"
+    def __init__(
+        self,
+        base_dir: Path | None = None,
+        *,
+        config: Config | None = None,
+        tts_runtime: object | None = None,
+        tts_client: object | None = None,
+    ):
+        self.config = config or Config.load(base_dir)
+        self.base_dir = base_dir or self.config.base_dir
+        self.tts_config = self.config.tts
+        self.tts_runtime = tts_runtime or TTSRuntime(self.tts_config)
+        self.tts_client = tts_client or TTSClient(self.tts_config)
+        self.logs_dir = self.base_dir / "logs"
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.states: dict[str, ServiceState] = {s.slug: ServiceState() for s in SERVICES}
 
     # ── Start / stop ────────────────────────────────────────────────
 
     def start_all(self) -> None:
-        started: set[str] = set()
         for svc in self._topo_order():
-            for dep in svc.depends_on:
-                if dep not in started:
-                    self._wait_healthy(dep, timeout=30)
+            if any(not self._wait_healthy(dep, timeout=30) for dep in svc.depends_on):
+                log.error("%s: dependency failed to become healthy", svc.slug)
+                self.states[svc.slug].status = "error"
+                continue
             self._start_one(svc)
-            started.add(svc.slug)
 
     def stop_all(self) -> None:
         for svc in reversed(self._topo_order()):
@@ -57,6 +69,20 @@ class ProcessSupervisor:
         state = self.states[svc.slug]
         if state.status in ("running", "starting"):
             return
+        if svc.slug == "kokoro-edge":
+            state.status = "starting"
+            state.last_restart = time.monotonic()
+            try:
+                self.tts_runtime.ensure_running()
+            except Exception:
+                log.exception("%s: failed to start through shared TTS runtime", svc.slug)
+                state.status = "error"
+                return
+            state.process = None
+            state.status = "running"
+            state.healthy_since = time.monotonic()
+            return
+        assert svc.start_cmd is not None
         if not shutil.which(svc.start_cmd[0]):
             log.warning("%s: binary %r not found", svc.slug, svc.start_cmd[0])
             state.status = "not_found"
@@ -87,7 +113,14 @@ class ProcessSupervisor:
         if state.status in ("stopped", "not_found"):
             return
 
-        if svc.stop_cmd and shutil.which(svc.stop_cmd[0]):
+        if svc.slug == "kokoro-edge":
+            try:
+                self.tts_runtime.stop()
+            except Exception:
+                log.exception("%s: failed to stop through shared TTS runtime", svc.slug)
+                state.status = "error"
+                return
+        elif svc.stop_cmd and shutil.which(svc.stop_cmd[0]):
             with suppress(subprocess.SubprocessError):
                 subprocess.run(svc.stop_cmd, timeout=5)
         elif state.process:
@@ -119,10 +152,16 @@ class ProcessSupervisor:
                     state.healthy_since = time.monotonic()
                 elif time.monotonic() - state.healthy_since > HEALTHY_RESET_SECS:
                     state.restart_count = 0
-            elif state.status in ("running", "starting"):
+            elif state.status in ("running", "starting", "error"):
                 self._handle_failure(svc, state)
 
     def _probe(self, svc: ServiceDef) -> bool:
+        if svc.slug == "kokoro-edge":
+            try:
+                self.tts_client.server_status()
+                return True
+            except Exception:
+                return False
         if not svc.health_url:
             # No health URL — check process is alive
             return self.states[svc.slug].process is not None and self.states[svc.slug].process.poll() is None
@@ -147,15 +186,16 @@ class ProcessSupervisor:
 
     # ── Helpers ─────────────────────────────────────────────────────
 
-    def _wait_healthy(self, slug: str, timeout: float = 30) -> None:
+    def _wait_healthy(self, slug: str, timeout: float = 30) -> bool:
         svc = SERVICE_MAP[slug]
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self._probe(svc):
                 self.states[slug].status = "running"
-                return
+                return True
             time.sleep(1)
         log.warning("%s: timed out waiting for health", slug)
+        return False
 
     def _topo_order(self) -> list[ServiceDef]:
         no_deps = [s for s in SERVICES if not s.depends_on]

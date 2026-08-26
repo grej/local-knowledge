@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 import tomllib
+import warnings
 
 from .llm import LLMConfig
 from .tts import TTSConfig
@@ -52,7 +53,7 @@ class Config:
             data = tomllib.load(f)
 
         config.database = _merge_dataclass(DatabaseConfig, config.database, data.get("database", {}))
-        config.tts = _merge_dataclass(TTSConfig, config.tts, data.get("tts", {}))
+        config.tts = _load_tts_config(config.tts, data.get("tts", {}))
         config.llm = _merge_dataclass(LLMConfig, config.llm, data.get("llm", {}))
         config.embeddings = _merge_dataclass(EmbeddingsConfig, config.embeddings, data.get("embeddings", {}))
 
@@ -98,7 +99,11 @@ class Config:
         lines.append("")
 
         lines.append("[tts]")
-        lines.append(f'server_url = {json.dumps(self.tts.server_url)}')
+        lines.append(f'transport = {json.dumps(self.tts.transport)}')
+        if self.tts.transport == "unix":
+            lines.append(f'socket_path = {json.dumps(self.tts.socket_path)}')
+        elif self.tts.server_url:
+            lines.append(f'server_url = {json.dumps(self.tts.server_url)}')
         lines.append(f'model = {json.dumps(self.tts.model)}')
         lines.append(f'voice = {json.dumps(self.tts.voice)}')
         lines.append(f"speed = {self.tts.speed}")
@@ -146,6 +151,38 @@ def _merge_dataclass(cls, current, data: dict) -> Any:
     allowed = {f.name for f in fields(cls)}
     filtered = {k: v for k, v in data.items() if k in allowed}
     return cls(**{**asdict(current), **filtered})
+
+
+def _load_tts_config(current: TTSConfig, data: dict[str, Any]) -> TTSConfig:
+    values = dict(data)
+    transport = values.get("transport")
+    legacy_url = values.get("server_url")
+
+    if transport is None:
+        if legacy_url in {None, "http://127.0.0.1:7777", "http://localhost:7777"}:
+            values["transport"] = "unix"
+            values["socket_path"] = current.socket_path
+            values["server_url"] = None
+        else:
+            values["transport"] = "tcp"
+            warnings.warn(
+                "Legacy custom TTS server_url is preserved as explicit TCP transport; "
+                "set tts.transport explicitly before a future release.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+    transport = values.get("transport")
+    if transport == "unix":
+        values.setdefault("socket_path", current.socket_path)
+        values["server_url"] = None
+    elif transport == "tcp":
+        if not values.get("server_url"):
+            raise ValueError("TTS server_url is required when transport is TCP")
+    else:
+        raise ValueError("TTS transport must be 'unix' or 'tcp'")
+
+    return _merge_dataclass(TTSConfig, current, values)
 
 
 def _coerce_value(current: object, raw: str) -> object:

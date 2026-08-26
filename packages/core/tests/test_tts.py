@@ -1,70 +1,68 @@
-from unittest.mock import MagicMock, patch
+import httpx
+import pytest
 
 from localknowledge.tts import TTSClient, TTSConfig, TTSError
 
 
+def _client(handler) -> TTSClient:
+    return TTSClient(TTSConfig(), transport=httpx.MockTransport(handler))
+
+
 def test_synthesize_text():
-    config = TTSConfig()
-    client = TTSClient(config)
-    with patch("localknowledge.tts.httpx.post") as mock_post:
-        mock_post.return_value = MagicMock(
-            status_code=200, content=b"RIFF\x00\x00\x00\x00WAVEfmt "
-        )
-        result = client.synthesize_text("Hello world")
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/audio/speech"
+        return httpx.Response(200, content=b"RIFF\x00\x00\x00\x00WAVEfmt ", request=request)
+
+    result = _client(handler).synthesize_text("Hello world")
+
     assert result.startswith(b"RIFF")
-    call_kwargs = mock_post.call_args
-    assert "v1/audio/speech" in call_kwargs.args[0]
 
 
 def test_fetch_voices():
-    config = TTSConfig()
-    client = TTSClient(config)
-    with patch("localknowledge.tts.httpx.get") as mock_get:
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            json=lambda: {"voices": [{"name": "af_sky"}, {"name": "bm_daniel"}]},
+    client = _client(
+        lambda request: httpx.Response(
+            200,
+            json={"voices": [{"name": "af_sky"}, {"name": "bm_daniel"}]},
+            request=request,
         )
-        voices = client.fetch_voices()
+    )
+
+    voices = client.fetch_voices()
+
     assert len(voices) == 2
     assert voices[0]["name"] == "af_sky"
 
 
 def test_server_status():
-    config = TTSConfig()
-    client = TTSClient(config)
-    with patch("localknowledge.tts.httpx.get") as mock_get:
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            json=lambda: {"status": "running", "model": "kokoro-82m"},
+    client = _client(
+        lambda request: httpx.Response(
+            200,
+            json={"status": "running", "model": "kokoro-82m"},
+            request=request,
         )
-        status = client.server_status()
-    assert status["status"] == "running"
+    )
+
+    assert client.server_status()["status"] == "running"
 
 
 def test_server_status_error():
-    import httpx as real_httpx
+    def refused(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused", request=request)
 
-    config = TTSConfig()
-    client = TTSClient(config)
-    with patch(
-        "localknowledge.tts.httpx.get",
-        side_effect=real_httpx.ConnectError("refused"),
-    ):
-        try:
-            client.server_status()
-            assert False, "Should have raised"
-        except TTSError:
-            pass
+    with pytest.raises(TTSError):
+        _client(refused).server_status()
 
 
 def test_synthesize_with_voice_override():
-    config = TTSConfig()
-    client = TTSClient(config)
-    with patch("localknowledge.tts.httpx.post") as mock_post:
-        mock_post.return_value = MagicMock(
-            status_code=200, content=b"RIFF\x00\x00\x00\x00WAVEfmt "
-        )
-        client.synthesize_text("Hello", voice="bm_daniel", speed=1.5)
-    payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
-    assert payload["voice"] == "bm_daniel"
-    assert payload["speed"] == 1.5
+    payloads: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        payloads.append(json.loads(request.content))
+        return httpx.Response(200, content=b"RIFF\x00\x00\x00\x00WAVEfmt ", request=request)
+
+    _client(handler).synthesize_text("Hello", voice="bm_daniel", speed=1.5)
+
+    assert payloads[0]["voice"] == "bm_daniel"
+    assert payloads[0]["speed"] == 1.5
