@@ -408,6 +408,7 @@ def test_runtime_stop_uses_pid_managed_command_and_verifies_shutdown(socket_dir:
         TTSConfig(socket_path=str(socket_dir / "kokoro-edge.sock")),
         client_factory=lambda _config: client,
         subprocess_factory=run,
+        pid_file=socket_dir / "missing.pid",
         sleep=lambda _seconds: None,
     )
 
@@ -448,6 +449,7 @@ def test_runtime_removes_only_an_owned_stale_socket_before_start(socket_dir: Pat
         TTSConfig(socket_path=str(socket_path), startup_timeout_sec=1),
         client_factory=lambda _config: client,
         subprocess_factory=spawn,
+        pid_file=socket_dir / "missing.pid",
         sleep=lambda _seconds: None,
     )
 

@@ -82,6 +82,33 @@ def test_tts_probe_uses_shared_client_status_not_httpx_or_a_tcp_health_url(tmp_p
     assert client.status_calls == 1
 
 
+def test_http_health_probe_reads_only_headers_for_sse_endpoint(monkeypatch, tmp_path: Path) -> None:
+    supervisor = _supervisor(tmp_path / ".localknowledge", FakeRuntime(), FakeClient())
+    calls: list[tuple[str, str, int]] = []
+
+    class HeaderOnlyResponse:
+        status_code = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+    def stream(method: str, url: str, *, timeout: int):
+        calls.append((method, url, timeout))
+        return HeaderOnlyResponse()
+
+    monkeypatch.setattr("lk_desktop.supervisor.httpx.stream", stream)
+    monkeypatch.setattr(
+        "lk_desktop.supervisor.httpx.get",
+        lambda *_args, **_kwargs: pytest.fail("SSE probes must not wait for the response body"),
+    )
+
+    assert supervisor._probe(SERVICE_MAP["lk-mcp"]) is True
+    assert calls == [("GET", "http://127.0.0.1:8322/sse", 2)]
+
+
 def test_tts_stop_delegates_to_the_same_runtime_that_started_it(tmp_path: Path) -> None:
     runtime = FakeRuntime()
     client = FakeClient()

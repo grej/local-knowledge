@@ -166,8 +166,9 @@ class ProcessSupervisor:
             # No health URL — check process is alive
             return self.states[svc.slug].process is not None and self.states[svc.slug].process.poll() is None
         try:
-            r = httpx.get(svc.health_url, timeout=2)
-            return r.status_code < 500
+            # SSE health endpoints never finish their response body. Probe headers only.
+            with httpx.stream("GET", svc.health_url, timeout=2) as response:
+                return response.status_code < 500
         except (httpx.HTTPError, OSError):
             return False
 
