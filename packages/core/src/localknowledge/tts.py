@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 import errno
 import os
 from pathlib import Path
+from queue import Empty, Queue
 import re
 import shutil
 import socket
@@ -13,7 +15,7 @@ import stat
 import subprocess
 import threading
 import time
-from typing import Callable, Literal, Optional
+from typing import Callable, IO, Literal, Optional
 from urllib.parse import urlparse
 import warnings
 
@@ -23,6 +25,12 @@ import httpx
 DEFAULT_SOCKET_PATH = "~/.localknowledge/run/kokoro-edge.sock"
 MINIMUM_KOKORO_EDGE_VERSION = (0, 2, 0)
 LEGACY_ENDPOINTS = ("http://127.0.0.1:7777", "http://localhost:7777")
+MODEL_STATUS_PATTERN = re.compile(
+    r"(?m)^(?P<model>[^:\n]+):\s+(?P<state>downloaded|not downloaded)\s*$"
+    r"\n\s*(?P<downloaded>\d+)\s*/\s*(?P<total>\d+)\s+bytes\b"
+)
+
+TTSProgressCallback = Callable[[str, str], None]
 
 
 @dataclass(slots=True)
@@ -37,6 +45,22 @@ class TTSConfig:
     binary: str = "kokoro-edge"
     auto_start: bool = True
     startup_timeout_sec: int = 30
+    model_download_timeout_sec: int = 1800
+    model_download_stall_timeout_sec: int = 120
+
+
+@dataclass(frozen=True, slots=True)
+class TTSModelStatus:
+    name: str
+    is_available: bool
+    downloaded_bytes: int
+    total_bytes: int
+
+    @property
+    def percent(self) -> int:
+        if self.total_bytes <= 0:
+            return 0
+        return min(100, round((self.downloaded_bytes / self.total_bytes) * 100))
 
 
 class TTSError(RuntimeError):
@@ -142,6 +166,8 @@ class TTSRuntime:
         *,
         client_factory: Callable[[TTSConfig], object] = TTSClient,
         subprocess_factory: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+        popen_factory: Callable[..., subprocess.Popen] = subprocess.Popen,
+        progress_callback: TTSProgressCallback | None = None,
         legacy_probe: Callable[[str], bool] | None = None,
         pid_file: Path | None = None,
         sleep: Callable[[float], None] = time.sleep,
@@ -151,11 +177,16 @@ class TTSRuntime:
         self.config = config
         self._client = client_factory(config)
         self._subprocess = subprocess_factory
+        self._popen = popen_factory
+        self._progress_callback = progress_callback
         self._legacy_probe = legacy_probe or _probe_legacy_endpoint
         self._pid_file = pid_file or Path("~/.kokoro-edge/kokoro-edge.pid").expanduser()
         self._sleep = sleep
         self._monotonic = monotonic
         self._start_lock = threading.Lock()
+
+    def set_progress_callback(self, callback: TTSProgressCallback | None) -> None:
+        self._progress_callback = callback
 
     @property
     def endpoint(self) -> str:
@@ -175,6 +206,10 @@ class TTSRuntime:
     def binary_available(self) -> bool:
         binary = Path(self.binary)
         return binary.is_file() or shutil.which(self.binary) is not None
+
+    def model_status(self) -> TTSModelStatus:
+        self._require_compatible_binary()
+        return self._model_status()
 
     def ensure_running(self) -> dict[str, object]:
         try:
@@ -227,6 +262,8 @@ class TTSRuntime:
             self._migrate_legacy_daemon()
             self._prepare_unix_endpoint()
         self._require_compatible_binary()
+        self._ensure_model_available()
+        self._emit_progress("server_start", f"Starting TTS engine with {self.config.model}")
         command = self._serve_command()
         result = self._run(command, timeout=15)
         if result.returncode != 0:
@@ -261,7 +298,7 @@ class TTSRuntime:
 
     def _serve_command(self) -> list[str]:
         if self.config.transport == "unix":
-            return [self.binary, "serve", "-d", "--socket", str(self.socket_path)]
+            return [self.binary, "serve", "-d", "--socket", str(self.socket_path), "--skip-download"]
         parsed = urlparse(str(self.config.server_url))
         return [
             self.binary,
@@ -271,7 +308,134 @@ class TTSRuntime:
             parsed.hostname or "127.0.0.1",
             "--port",
             str(parsed.port or 7777),
+            "--skip-download",
         ]
+
+    def _ensure_model_available(self) -> None:
+        self._emit_progress("model_check", f"Checking TTS model {self.config.model}")
+        status = self._model_status()
+        if status.is_available:
+            self._emit_progress("model_ready", f"TTS model {self.config.model} is ready")
+            return
+
+        size = _format_bytes(status.total_bytes)
+        self._emit_progress(
+            "model_download_required",
+            f"TTS model {self.config.model} requires a {size} download",
+        )
+        self._emit_progress(
+            "model_download",
+            f"Downloading TTS model {self.config.model} ({status.percent}% complete)",
+        )
+        self._pull_model()
+
+        self._emit_progress("model_verify", f"Verifying TTS model {self.config.model}")
+        verified = self._model_status()
+        if not verified.is_available or verified.downloaded_bytes != verified.total_bytes:
+            raise TTSError(
+                f"kokoro-edge reported a successful download, but model {self.config.model} "
+                f"is incomplete ({verified.downloaded_bytes}/{verified.total_bytes} bytes)"
+            )
+        self._emit_progress("model_ready", f"TTS model {self.config.model} is ready")
+
+    def _model_status(self) -> TTSModelStatus:
+        command = [self.binary, "models", "list"]
+        result = self._run(command, timeout=15)
+        if result.returncode != 0:
+            raise TTSError(f"Failed to inspect kokoro-edge models: {_process_error(result)}")
+        output = f"{getattr(result, 'stdout', '')}\n{getattr(result, 'stderr', '')}"
+        for match in MODEL_STATUS_PATTERN.finditer(output):
+            if match.group("model").strip() != self.config.model:
+                continue
+            downloaded = int(match.group("downloaded"))
+            total = int(match.group("total"))
+            return TTSModelStatus(
+                name=self.config.model,
+                is_available=match.group("state") == "downloaded" and total > 0 and downloaded == total,
+                downloaded_bytes=downloaded,
+                total_bytes=total,
+            )
+        raise TTSError(
+            f"Unable to verify TTS model {self.config.model}; "
+            f"'kokoro-edge models list' returned an unrecognized response"
+        )
+
+    def _pull_model(self) -> None:
+        command = [self.binary, "models", "pull", self.config.model]
+        try:
+            process = self._popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+        except FileNotFoundError as exc:
+            raise TTSError(
+                f"Could not find {self.config.binary}. Install or upgrade kokoro-edge >= 0.2.0."
+            ) from exc
+        except OSError as exc:
+            raise TTSError(f"Failed to start TTS model download: {exc}") from exc
+
+        if process.stdout is None:
+            _terminate_process(process)
+            raise TTSError("Failed to monitor TTS model download: kokoro-edge output was unavailable")
+
+        output_queue: Queue[str | None] = Queue()
+        reader = threading.Thread(
+            target=_read_process_output,
+            args=(process.stdout, output_queue),
+            daemon=True,
+        )
+        reader.start()
+
+        started_at = self._monotonic()
+        last_progress_at = started_at
+        output: list[str] = []
+        stream_closed = False
+        while True:
+            try:
+                raw_line = output_queue.get(timeout=0.1)
+            except Empty:
+                raw_line = ""
+
+            if raw_line is None:
+                stream_closed = True
+            elif raw_line:
+                line = raw_line.strip()
+                if line:
+                    output.append(line)
+                    last_progress_at = self._monotonic()
+                    if not line.startswith("LLVM Profile Error"):
+                        self._emit_progress("model_download", line)
+
+            returncode = process.poll()
+            if returncode is not None and stream_closed:
+                break
+
+            now = self._monotonic()
+            if now - started_at >= self.config.model_download_timeout_sec:
+                _terminate_process(process)
+                raise TTSError(
+                    f"TTS model download exceeded {self.config.model_download_timeout_sec} seconds. "
+                    "Check the network connection and retry."
+                )
+            if now - last_progress_at >= self.config.model_download_stall_timeout_sec:
+                _terminate_process(process)
+                raise TTSError(
+                    f"TTS model download made no progress for "
+                    f"{self.config.model_download_stall_timeout_sec} seconds. "
+                    "Check the network connection and retry."
+                )
+
+        returncode = process.wait(timeout=5)
+        if returncode != 0:
+            details = "\n".join(output[-10:]).strip() or f"exit status {returncode}"
+            raise TTSError(f"Failed to download TTS model {self.config.model}: {details}")
+
+    def _emit_progress(self, stage: str, message: str) -> None:
+        if self._progress_callback is not None:
+            self._progress_callback(stage, message)
 
     def _require_compatible_binary(self) -> None:
         result = self._run([self.binary, "--version"], timeout=10)
@@ -366,10 +530,44 @@ def _validate_config(config: TTSConfig) -> None:
         raise ValueError("TTS socket_path is required for Unix transport")
     if config.transport == "tcp" and not config.server_url:
         raise ValueError("TTS server_url is required for TCP transport")
+    if config.startup_timeout_sec <= 0:
+        raise ValueError("TTS startup_timeout_sec must be positive")
+    if config.model_download_timeout_sec <= 0:
+        raise ValueError("TTS model_download_timeout_sec must be positive")
+    if config.model_download_stall_timeout_sec <= 0:
+        raise ValueError("TTS model_download_stall_timeout_sec must be positive")
 
 
 def _expanded_socket_path(value: str) -> Path:
     return Path(value).expanduser().absolute()
+
+
+def _format_bytes(value: int) -> str:
+    if value <= 0:
+        return "model asset"
+    return f"{value / 1_000_000:.1f} MB"
+
+
+def _read_process_output(stream: IO[str], output_queue: Queue[str | None]) -> None:
+    try:
+        for line in stream:
+            output_queue.put(line)
+    finally:
+        with suppress(OSError):
+            stream.close()
+        output_queue.put(None)
+
+
+def _terminate_process(process: subprocess.Popen) -> None:
+    with suppress(OSError):
+        process.terminate()
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        with suppress(OSError):
+            process.kill()
+        with suppress(OSError, subprocess.TimeoutExpired):
+            process.wait(timeout=2)
 
 
 def _managed_pid_is_alive(pid_file: Path) -> bool:

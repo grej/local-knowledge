@@ -8,6 +8,7 @@ process is constructed.
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import io
 import os
 from pathlib import Path
 import shutil
@@ -61,6 +62,30 @@ def _status_payload() -> dict[str, object]:
     }
 
 
+def _model_list_output(*, downloaded: int = 341_747_187, total: int = 341_747_187) -> str:
+    state = "downloaded" if downloaded == total and total > 0 else "not downloaded"
+    return f"kokoro-82m: {state}\n  {downloaded} / {total} bytes (341.7 MB / 341.7 MB)\n  /tmp/kokoro-82m\n"
+
+
+class FakePullProcess:
+    def __init__(self, output: str, returncode: int = 0) -> None:
+        self.stdout = io.StringIO(output)
+        self.returncode = returncode
+        self.terminated = False
+
+    def poll(self) -> int:
+        return self.returncode
+
+    def wait(self, timeout: float) -> int:
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def kill(self) -> None:
+        self.terminated = True
+
+
 @pytest.fixture
 def socket_dir() -> Path:
     path = Path("/tmp") / f"lk-tts-contract-{uuid.uuid4().hex}"
@@ -84,6 +109,8 @@ def test_tts_config_defaults_to_the_canonical_uds_endpoint() -> None:
     assert config.binary == "kokoro-edge"
     assert config.auto_start is True
     assert config.startup_timeout_sec == 30
+    assert config.model_download_timeout_sec == 1800
+    assert config.model_download_stall_timeout_sec == 120
 
 
 @pytest.mark.parametrize("legacy_url", [None, "http://127.0.0.1:7777", "http://localhost:7777"])
@@ -332,6 +359,8 @@ def test_runtime_concurrent_start_race_spawns_once_and_reprobes(socket_dir: Path
         nonlocal spawn_count
         if _command[-1] == "--version":
             return subprocess.CompletedProcess(_command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        if _command[-2:] == ["models", "list"]:
+            return subprocess.CompletedProcess(_command, 0, stdout=_model_list_output(), stderr="")
         with spawn_lock:
             spawn_count += 1
             client.ready = True
@@ -349,6 +378,162 @@ def test_runtime_concurrent_start_race_spawns_once_and_reprobes(socket_dir: Path
 
     assert results == [_status_payload(), _status_payload()]
     assert spawn_count == 1
+
+
+def test_runtime_downloads_and_verifies_a_missing_model_before_starting(socket_dir: Path) -> None:
+    client = FakeClient(TTSError("Unix socket is missing"))
+    model_downloaded = False
+    run_commands: list[list[str]] = []
+    pull_commands: list[list[str]] = []
+    events: list[tuple[str, str]] = []
+
+    def run(command, **_kwargs):
+        run_commands.append(command)
+        if command[-1] == "--version":
+            return subprocess.CompletedProcess(command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        if command[-2:] == ["models", "list"]:
+            output = _model_list_output() if model_downloaded else _model_list_output(downloaded=0)
+            return subprocess.CompletedProcess(command, 0, stdout=output, stderr="")
+        assert command[-1] == "--skip-download"
+        client.status = _status_payload()
+        return subprocess.CompletedProcess(command, 0, stdout="started", stderr="")
+
+    def popen(command, **_kwargs):
+        nonlocal model_downloaded
+        pull_commands.append(command)
+        model_downloaded = True
+        return FakePullProcess(
+            "Downloading model.onnx...\n"
+            "Downloading model.onnx... 341.7 MB/341.7 MB (100%)\n"
+            "Model ready: kokoro-82m\n"
+        )
+
+    runtime = TTSRuntime(
+        TTSConfig(socket_path=str(socket_dir / "kokoro-edge.sock"), startup_timeout_sec=1),
+        client_factory=lambda _config: client,
+        subprocess_factory=run,
+        popen_factory=popen,
+        progress_callback=lambda stage, message: events.append((stage, message)),
+        sleep=lambda _seconds: None,
+    )
+
+    assert runtime.ensure_running() == _status_payload()
+    assert pull_commands == [["kokoro-edge", "models", "pull", "kokoro-82m"]]
+    assert sum(command[-2:] == ["models", "list"] for command in run_commands) == 2
+    assert run_commands[-1] == [
+        "kokoro-edge",
+        "serve",
+        "-d",
+        "--socket",
+        str(socket_dir / "kokoro-edge.sock"),
+        "--skip-download",
+    ]
+    stages = [stage for stage, _message in events]
+    assert stages[0:3] == ["model_check", "model_download_required", "model_download"]
+    assert "model_verify" in stages
+    assert stages[-2:] == ["model_ready", "server_start"]
+
+
+def test_runtime_rejects_a_model_that_remains_incomplete_after_pull(socket_dir: Path) -> None:
+    client = FakeClient(TTSError("Unix socket is missing"))
+    commands: list[list[str]] = []
+
+    def run(command, **_kwargs):
+        commands.append(command)
+        if command[-1] == "--version":
+            return subprocess.CompletedProcess(command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        if command[-2:] == ["models", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=_model_list_output(downloaded=100, total=200),
+                stderr="",
+            )
+        raise AssertionError(f"daemon must not start with an incomplete model: {command}")
+
+    runtime = TTSRuntime(
+        TTSConfig(socket_path=str(socket_dir / "kokoro-edge.sock")),
+        client_factory=lambda _config: client,
+        subprocess_factory=run,
+        popen_factory=lambda command, **_kwargs: FakePullProcess("Model ready: kokoro-82m\n"),
+    )
+
+    with pytest.raises(TTSError, match=r"successful download.*incomplete.*100/200"):
+        runtime.ensure_running()
+
+    assert not any("serve" in command for command in commands)
+
+
+def test_runtime_reports_model_download_command_failure(socket_dir: Path) -> None:
+    client = FakeClient(TTSError("Unix socket is missing"))
+
+    def run(command, **_kwargs):
+        if command[-1] == "--version":
+            return subprocess.CompletedProcess(command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        if command[-2:] == ["models", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=_model_list_output(downloaded=0), stderr="")
+        raise AssertionError(f"daemon must not start after a failed download: {command}")
+
+    runtime = TTSRuntime(
+        TTSConfig(socket_path=str(socket_dir / "kokoro-edge.sock")),
+        client_factory=lambda _config: client,
+        subprocess_factory=run,
+        popen_factory=lambda command, **_kwargs: FakePullProcess("network unreachable\n", returncode=2),
+    )
+
+    with pytest.raises(TTSError, match=r"Failed to download.*network unreachable"):
+        runtime.ensure_running()
+
+
+def test_runtime_aborts_a_stalled_model_download(socket_dir: Path) -> None:
+    client = FakeClient(TTSError("Unix socket is missing"))
+
+    class StalledPullProcess(FakePullProcess):
+        def __init__(self) -> None:
+            super().__init__("")
+            self.returncode = None
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout: float) -> int:
+            return -15 if self.terminated else 0
+
+        def terminate(self) -> None:
+            self.terminated = True
+            self.returncode = -15
+
+    stalled = StalledPullProcess()
+    clock = 0
+
+    def monotonic() -> float:
+        nonlocal clock
+        clock += 1
+        return float(clock)
+
+    def run(command, **_kwargs):
+        if command[-1] == "--version":
+            return subprocess.CompletedProcess(command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        if command[-2:] == ["models", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=_model_list_output(downloaded=0), stderr="")
+        raise AssertionError(f"daemon must not start after a stalled download: {command}")
+
+    runtime = TTSRuntime(
+        TTSConfig(
+            socket_path=str(socket_dir / "kokoro-edge.sock"),
+            model_download_timeout_sec=10,
+            model_download_stall_timeout_sec=1,
+        ),
+        client_factory=lambda _config: client,
+        subprocess_factory=run,
+        popen_factory=lambda command, **_kwargs: stalled,
+        monotonic=monotonic,
+    )
+
+    with pytest.raises(TTSError, match=r"no progress for 1 seconds.*network"):
+        runtime.ensure_running()
+
+    assert stalled.terminated is True
 
 
 def test_runtime_rejects_an_incompatible_binary_with_upgrade_guidance(socket_dir: Path) -> None:
@@ -375,6 +560,8 @@ def test_runtime_reports_failed_spawn_when_no_concurrent_winner(socket_dir: Path
     def run(command, **_kwargs):
         if command[-1] == "--version":
             return subprocess.CompletedProcess(command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        if command[-2:] == ["models", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=_model_list_output(), stderr="")
         return subprocess.CompletedProcess(command, 1, stdout="", stderr="bind failed")
 
     runtime = TTSRuntime(
@@ -441,6 +628,8 @@ def test_runtime_removes_only_an_owned_stale_socket_before_start(socket_dir: Pat
     def spawn(command, **_kwargs):
         if command[-1] == "--version":
             return subprocess.CompletedProcess(command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        if command[-2:] == ["models", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=_model_list_output(), stderr="")
         spawn_observations.append((command, socket_path.exists()))
         client.status = _status_payload()
         return subprocess.CompletedProcess(command, 0)
@@ -454,7 +643,9 @@ def test_runtime_removes_only_an_owned_stale_socket_before_start(socket_dir: Pat
     )
 
     assert runtime.ensure_running() == _status_payload()
-    assert spawn_observations == [(["kokoro-edge", "serve", "-d", "--socket", str(socket_path)], False)]
+    assert spawn_observations == [
+        (["kokoro-edge", "serve", "-d", "--socket", str(socket_path), "--skip-download"], False)
+    ]
 
 
 @pytest.mark.parametrize("kind", ["regular", "symlink"])
@@ -536,6 +727,8 @@ def test_runtime_migrates_only_an_owned_legacy_tcp_daemon(monkeypatch, socket_di
             legacy_ready = False
         elif command[-1] == "--version":
             return subprocess.CompletedProcess(command, 0, stdout="kokoro-edge 0.2.0", stderr="")
+        elif command[-2:] == ["models", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=_model_list_output(), stderr="")
         else:
             client.status = _status_payload()
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
@@ -553,7 +746,14 @@ def test_runtime_migrates_only_an_owned_legacy_tcp_daemon(monkeypatch, socket_di
         assert runtime.ensure_running() == _status_payload()
 
     assert commands[0] == ["kokoro-edge", "stop"]
-    assert commands[-1][-3:] == ["-d", "--socket", str(socket_dir / ".localknowledge/run/kokoro-edge.sock")]
+    assert commands[-1] == [
+        "kokoro-edge",
+        "serve",
+        "-d",
+        "--socket",
+        str(socket_dir / ".localknowledge/run/kokoro-edge.sock"),
+        "--skip-download",
+    ]
 
 
 def test_runtime_refuses_to_kill_an_unowned_legacy_listener(monkeypatch, socket_dir: Path) -> None:

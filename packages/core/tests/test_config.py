@@ -28,6 +28,18 @@ def test_toml_roundtrip(base_dir):
     assert reloaded.llm.api_key == "sk-test-123"
 
 
+def test_tts_model_download_timeouts_roundtrip(base_dir):
+    config = Config.load(base_dir)
+    config.tts.model_download_timeout_sec = 2400
+    config.tts.model_download_stall_timeout_sec = 180
+    config.save()
+
+    reloaded = Config.load(base_dir)
+
+    assert reloaded.tts.model_download_timeout_sec == 2400
+    assert reloaded.tts.model_download_stall_timeout_sec == 180
+
+
 def test_product_sections(base_dir):
     config = Config.load(base_dir)
     config.set_product_config(

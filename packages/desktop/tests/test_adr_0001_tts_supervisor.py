@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from localknowledge.config import Config
+from localknowledge.tts import TTSModelStatus
+from lk_desktop import app as desktop_app
 from lk_desktop.services import SERVICE_MAP
-from lk_desktop.supervisor import ProcessSupervisor
+from lk_desktop.supervisor import ProcessSupervisor, ServiceState
 
 
 class FakeRuntime:
@@ -16,6 +19,13 @@ class FakeRuntime:
         self.status = status or {"model": "kokoro-82m", "models_loaded": ["kokoro-82m"]}
         self.ensure_calls = 0
         self.stop_calls = 0
+        self.progress_callback = None
+
+    def set_progress_callback(self, callback) -> None:
+        self.progress_callback = callback
+
+    def model_status(self) -> TTSModelStatus:
+        return TTSModelStatus("kokoro-82m", True, 341_747_187, 341_747_187)
 
     def ensure_running(self) -> dict[str, object]:
         self.ensure_calls += 1
@@ -71,6 +81,71 @@ def test_starting_tts_delegates_to_runtime_without_spawning_a_process(monkeypatc
     assert runtime.ensure_calls == 1
     assert supervisor.states["kokoro-edge"].status == "running"
     assert supervisor.states["kokoro-edge"].process is None
+
+
+def test_tts_download_progress_is_exposed_in_service_state(tmp_path: Path) -> None:
+    runtime = FakeRuntime()
+    supervisor = _supervisor(tmp_path / ".localknowledge", runtime, FakeClient())
+
+    assert runtime.progress_callback is not None
+    runtime.progress_callback("model_download", "Downloading model.onnx... 170 MB/341.7 MB (50%)")
+
+    state = supervisor.states["kokoro-edge"]
+    assert state.activity == "model_download"
+    assert state.detail == "Downloading model.onnx... 170 MB/341.7 MB (50%)"
+
+
+def test_health_tick_does_not_restart_tts_during_model_download(monkeypatch, tmp_path: Path) -> None:
+    runtime = FakeRuntime()
+    supervisor = _supervisor(tmp_path / ".localknowledge", runtime, FakeClient())
+    state = supervisor.states["kokoro-edge"]
+    state.status = "starting"
+    state.activity = "model_download"
+    state.detail = "Downloading kokoro-82m (10%)"
+
+    monkeypatch.setattr(
+        supervisor,
+        "_probe",
+        lambda _service: pytest.fail("an active synchronous TTS start must not be probed or restarted"),
+    )
+
+    supervisor.check_health()
+
+    assert runtime.ensure_calls == 0
+    assert runtime.stop_calls == 0
+    assert state.status == "starting"
+    assert state.detail == "Downloading kokoro-82m (10%)"
+
+
+def test_desktop_prompts_before_a_required_model_download(monkeypatch) -> None:
+    alerts: list[dict[str, object]] = []
+
+    class DownloadSupervisor:
+        states = {"kokoro-edge": ServiceState()}
+
+        def tts_model_status(self) -> TTSModelStatus:
+            return TTSModelStatus("kokoro-82m", False, 0, 341_747_187)
+
+    fake_app = SimpleNamespace(
+        supervisor=DownloadSupervisor(),
+        # A prior failed attempt must not suppress the prompt on retry.
+        _download_notice_shown=True,
+    )
+
+    def alert(**kwargs):
+        alerts.append(kwargs)
+        return 1
+
+    monkeypatch.setattr(desktop_app.rumps, "alert", alert)
+
+    assert desktop_app.LKDesktopApp._confirm_model_download(fake_app) is True
+    assert fake_app._download_notice_shown is True
+    assert alerts[0]["title"] == "TTS Model Download Required"
+    assert alerts[0]["ok"] == "Download"
+    assert alerts[0]["cancel"] == "Not Now"
+    assert "341.7 MB" in alerts[0]["message"]
+    assert "progress" in alerts[0]["message"]
+    assert "SHA-256" in alerts[0]["message"]
 
 
 def test_tts_probe_uses_shared_client_status_not_httpx_or_a_tcp_health_url(tmp_path: Path) -> None:

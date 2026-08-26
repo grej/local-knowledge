@@ -111,6 +111,8 @@ class Config:
         lines.append(f'binary = {json.dumps(self.tts.binary)}')
         lines.append(f"auto_start = {str(self.tts.auto_start).lower()}")
         lines.append(f"startup_timeout_sec = {self.tts.startup_timeout_sec}")
+        lines.append(f"model_download_timeout_sec = {self.tts.model_download_timeout_sec}")
+        lines.append(f"model_download_stall_timeout_sec = {self.tts.model_download_stall_timeout_sec}")
         lines.append("")
 
         lines.append("[llm]")

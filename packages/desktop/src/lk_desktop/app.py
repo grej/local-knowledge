@@ -46,9 +46,20 @@ class LKDesktopApp(rumps.App):
         self._doc_count: int | None = None
         self._project_count: int | None = None
         self._stats_tick = 0
+        self._auto_start_pending = self.desktop_config.auto_start_services
+        self._download_notice_shown = False
+        self._service_start_pending = False
 
-        if self.desktop_config.auto_start_services:
-            threading.Thread(target=self.supervisor.start_all, daemon=True).start()
+    @rumps.timer(0.5)
+    def startup_tick(self, timer):
+        timer.stop()
+        if self._auto_start_pending:
+            self._auto_start_pending = False
+            self._start_all(None)
+
+    @rumps.timer(1)
+    def menu_tick(self, _):
+        self._refresh_menu()
 
     @rumps.timer(10)
     def health_tick(self, _):
@@ -83,6 +94,10 @@ class LKDesktopApp(rumps.App):
             state = self.supervisor.states[svc.slug]
             icon = STATUS_ICONS.get(state.status, "\u25cb")
             label = STATUS_LABELS.get(state.status, state.status)
+            if state.detail and state.status == "starting":
+                label = _short_status(state.detail)
+            elif state.detail and state.status == "error":
+                label = f"Error: {_short_status(state.detail)}"
 
             if svc.web_url and state.status == "running":
                 title = f"{icon} {svc.display_name}"
@@ -124,7 +139,50 @@ class LKDesktopApp(rumps.App):
                 self.menu.add(item)
 
     def _start_all(self, _) -> None:
-        threading.Thread(target=self.supervisor.start_all, daemon=True).start()
+        if self._service_start_pending:
+            return
+        if not self._confirm_model_download():
+            return
+        self._service_start_pending = True
+        threading.Thread(target=self._run_start_all, daemon=True).start()
+
+    def _run_start_all(self) -> None:
+        try:
+            self.supervisor.start_all()
+        finally:
+            self._service_start_pending = False
+
+    def _confirm_model_download(self) -> bool:
+        try:
+            status = self.supervisor.tts_model_status()
+        except Exception:
+            # The background start path reports binary and model inspection errors in the service row.
+            return True
+        if status.is_available:
+            return True
+
+        size = f"{status.total_bytes / 1_000_000:.1f} MB" if status.total_bytes > 0 else "about 330 MB"
+        resume = (
+            f" Existing verified assets are {status.percent}% complete and will be reused."
+            if status.downloaded_bytes
+            else ""
+        )
+        result = rumps.alert(
+            title="TTS Model Download Required",
+            message=(
+                f"Local Knowledge needs to download {status.name} ({size}) before the TTS Engine can start."
+                f"{resume}\n\nDownload progress will appear next to TTS Engine in this menu. "
+                "The model is verified by file size and SHA-256 before Readcast starts."
+            ),
+            ok="Download",
+            cancel="Not Now",
+        )
+        if result != 1:
+            state = self.supervisor.states["kokoro-edge"]
+            state.detail = "Model download postponed"
+            return False
+        self._download_notice_shown = True
+        return True
 
     def _stop_all(self, _) -> None:
         threading.Thread(target=self.supervisor.stop_all, daemon=True).start()
@@ -200,6 +258,13 @@ def _open_ui(url: str) -> None:
         _sp.Popen(["open", "-a", app_path])
     else:
         webbrowser.open(url)
+
+
+def _short_status(message: str, limit: int = 80) -> str:
+    normalized = " ".join(message.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 1].rstrip() + "\u2026"
 
 
 def _run_app() -> None:

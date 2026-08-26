@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 from localknowledge.config import Config
-from localknowledge.tts import TTSClient, TTSRuntime
+from localknowledge.tts import TTSClient, TTSModelStatus, TTSRuntime
 
 from .services import SERVICES, SERVICE_MAP, ServiceDef
 
@@ -27,6 +27,8 @@ LOG_MAX_BYTES = 1_000_000
 @dataclass
 class ServiceState:
     status: str = "stopped"  # stopped | starting | running | error | not_found
+    activity: str | None = None
+    detail: str | None = None
     process: subprocess.Popen | None = None
     restart_count: int = 0
     last_restart: float | None = None
@@ -45,11 +47,21 @@ class ProcessSupervisor:
         self.config = config or Config.load(base_dir)
         self.base_dir = base_dir or self.config.base_dir
         self.tts_config = self.config.tts
-        self.tts_runtime = tts_runtime or TTSRuntime(self.tts_config)
-        self.tts_client = tts_client or TTSClient(self.tts_config)
         self.logs_dir = self.base_dir / "logs"
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.states: dict[str, ServiceState] = {s.slug: ServiceState() for s in SERVICES}
+        self.tts_runtime = tts_runtime or TTSRuntime(
+            self.tts_config,
+            progress_callback=self._on_tts_progress,
+        )
+        if tts_runtime is not None:
+            set_progress_callback = getattr(self.tts_runtime, "set_progress_callback", None)
+            if callable(set_progress_callback):
+                set_progress_callback(self._on_tts_progress)
+        self.tts_client = tts_client or TTSClient(self.tts_config)
+
+    def tts_model_status(self) -> TTSModelStatus:
+        return self.tts_runtime.model_status()
 
     # ── Start / stop ────────────────────────────────────────────────
 
@@ -58,6 +70,7 @@ class ProcessSupervisor:
             if any(not self._wait_healthy(dep, timeout=30) for dep in svc.depends_on):
                 log.error("%s: dependency failed to become healthy", svc.slug)
                 self.states[svc.slug].status = "error"
+                self.states[svc.slug].detail = "Dependency failed to become healthy"
                 continue
             self._start_one(svc)
 
@@ -71,21 +84,28 @@ class ProcessSupervisor:
             return
         if svc.slug == "kokoro-edge":
             state.status = "starting"
+            state.activity = "model_check"
+            state.detail = f"Checking model {self.tts_config.model}"
             state.last_restart = time.monotonic()
             try:
                 self.tts_runtime.ensure_running()
-            except Exception:
+            except Exception as exc:
                 log.exception("%s: failed to start through shared TTS runtime", svc.slug)
                 state.status = "error"
+                state.activity = "error"
+                state.detail = str(exc)
                 return
             state.process = None
             state.status = "running"
+            state.activity = None
+            state.detail = None
             state.healthy_since = time.monotonic()
             return
         assert svc.start_cmd is not None
         if not shutil.which(svc.start_cmd[0]):
             log.warning("%s: binary %r not found", svc.slug, svc.start_cmd[0])
             state.status = "not_found"
+            state.detail = f"{svc.start_cmd[0]} is not installed"
             return
 
         self._truncate_log(svc.slug)
@@ -105,6 +125,8 @@ class ProcessSupervisor:
             return
         state.process = proc
         state.status = "starting"
+        state.activity = None
+        state.detail = None
         state.last_restart = time.monotonic()
         log.info("%s: started (pid %d)", svc.slug, proc.pid)
 
@@ -133,6 +155,8 @@ class ProcessSupervisor:
 
         state.process = None
         state.status = "stopped"
+        state.activity = None
+        state.detail = None
         state.healthy_since = None
         log.info("%s: stopped", svc.slug)
 
@@ -143,11 +167,16 @@ class ProcessSupervisor:
             state = self.states[svc.slug]
             if state.status in ("stopped", "not_found"):
                 continue
+            if svc.slug == "kokoro-edge" and state.status == "starting":
+                # ensure_running owns this synchronous transition, including a possible model download.
+                continue
             alive = self._probe(svc)
             if alive:
                 if state.status != "running":
                     log.info("%s: now healthy", svc.slug)
                 state.status = "running"
+                state.activity = None
+                state.detail = None
                 if state.healthy_since is None:
                     state.healthy_since = time.monotonic()
                 elif time.monotonic() - state.healthy_since > HEALTHY_RESET_SECS:
@@ -184,6 +213,12 @@ class ProcessSupervisor:
         state.restart_count += 1
         self._stop_one(svc)
         self._start_one(svc)
+
+    def _on_tts_progress(self, stage: str, message: str) -> None:
+        state = self.states["kokoro-edge"]
+        state.activity = stage
+        state.detail = message
+        log.info("kokoro-edge: %s", message)
 
     # ── Helpers ─────────────────────────────────────────────────────
 
