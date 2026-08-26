@@ -32,7 +32,7 @@ def test_or_query_either_tag(db):
     tags = TagStore(db)
     doc1 = _create_doc(db, "Energy Doc")
     doc2 = _create_doc(db, "Politics Doc")
-    doc3 = _create_doc(db, "Unrelated")
+    _create_doc(db, "Unrelated")
 
     t_energy = tags.get_or_create("energy")
     t_politics = tags.get_or_create("politics")

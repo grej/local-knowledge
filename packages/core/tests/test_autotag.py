@@ -3,9 +3,7 @@
 import numpy as np
 
 from localknowledge.autotag import (
-    TOPIC_AUTO_THRESHOLD,
     TOPIC_SUGGEST_THRESHOLD,
-    AutoTagger,
 )
 from localknowledge.service import KnowledgeService
 
@@ -56,8 +54,6 @@ def test_suggest_topics_below_threshold_excluded(tmp_path):
     doc = svc.add_text("quantum computing and quantum mechanics", title="Quantum")
 
     suggestions = svc.suggest_topics(doc.id)
-    # Very dissimilar content should produce low scores
-    low_scores = [s for s in suggestions if s.score < TOPIC_SUGGEST_THRESHOLD]
     # Either no suggestions or all below threshold should be excluded
     for s in suggestions:
         assert s.score >= TOPIC_SUGGEST_THRESHOLD
@@ -132,7 +128,7 @@ def test_auto_tag_on_ingest(tmp_path):
     svc.tags.create("auto tag test content")
     doc = svc.add_text("auto tag test content is great", title="Auto Tagged")
     # auto_tag ran during ingest; check if any tags applied
-    tags = svc.get_document_tags(doc.id)
+    svc.get_document_tags(doc.id)
     # May or may not have applied based on mock similarity — just verify no crash
 
 
@@ -158,8 +154,6 @@ def test_suggest_all_combines_and_sorts(tmp_path):
     doc2 = svc.add_text("topic alpha and project beta content", title="Combined")
     suggestions = svc.autotagger.suggest_all(doc2.id)
 
-    # Should include both topic and project suggestions (if scores above threshold)
-    types = {s.tag_type for s in suggestions}
     # Verify sorted by score descending
     scores = [s.score for s in suggestions]
     assert scores == sorted(scores, reverse=True)

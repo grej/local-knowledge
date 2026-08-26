@@ -52,9 +52,9 @@ def test_search_with_project_filter(tmp_path):
     from lk_mcp.tools import ingest, search
 
     svc = _setup(tmp_path)
-    project = svc.create_project("ml-project")
+    svc.create_project("ml-project")
 
-    result = ingest(text="Neural networks explained", title="NN", projects=["ml-project"])
+    ingest(text="Neural networks explained", title="NN", projects=["ml-project"])
     ingest(text="Cooking pasta with tomato sauce", title="Pasta")
 
     results = search(query="neural", project="ml-project")
@@ -74,7 +74,7 @@ def test_find_connections_excludes_same_project(tmp_path):
     doc2 = svc.add_text("Deep learning optimization", title="DL Opt")
     svc.tags.tag_document(doc2.id, project["id"])
 
-    doc3 = svc.add_text("Neural network architectures", title="NN Arch")
+    svc.add_text("Neural network architectures", title="NN Arch")
     # doc3 is NOT in the project
 
     results = find_connections(doc_id=doc1.id, exclude_project="alpha")

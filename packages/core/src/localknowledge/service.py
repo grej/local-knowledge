@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
-from contextlib import closing
 from pathlib import Path
-from typing import Optional
 
 from .artifacts import ArtifactStore
 from .autotag import AutoTagger, TagSuggestion

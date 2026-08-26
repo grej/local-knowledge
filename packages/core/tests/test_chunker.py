@@ -1,6 +1,6 @@
 """Tests for paragraph-boundary text chunker."""
 
-from localknowledge.chunker import Chunk, chunk_text
+from localknowledge.chunker import chunk_text
 
 
 def test_single_paragraph_returns_one_chunk():

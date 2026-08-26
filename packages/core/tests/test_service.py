@@ -1,7 +1,5 @@
 """Tests for KnowledgeService (mock embeddings)."""
 
-from pathlib import Path
-
 import numpy as np
 
 from localknowledge.service import KnowledgeService

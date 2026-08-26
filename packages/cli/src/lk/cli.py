@@ -123,7 +123,6 @@ def show(ctx: click.Context, doc_id: str) -> None:
     if not doc:
         raise click.ClickException(f"Document {doc_id} not found.")
     tags = svc.get_document_tags(doc_id)
-    stats = svc.embedding_stats()
     chunk_count = _chunk_count(svc, doc_id)
     render_document_detail(doc, tags, chunk_count=chunk_count)
 

@@ -7,8 +7,7 @@ import sys
 import threading
 import subprocess as _sp
 import webbrowser
-from contextlib import closing, suppress
-from pathlib import Path
+from contextlib import closing
 
 import click
 import rumps

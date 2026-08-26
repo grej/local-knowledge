@@ -6,7 +6,7 @@ import numpy as np
 
 from localknowledge.chunker import Chunk
 from localknowledge.documents import DocumentStore
-from localknowledge.embeddings.dense import DenseBackend, TABLE, embedding_from_bytes
+from localknowledge.embeddings.dense import DenseBackend, TABLE
 
 
 def _mock_embed(texts):

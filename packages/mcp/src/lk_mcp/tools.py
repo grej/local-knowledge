@@ -140,7 +140,7 @@ def get_context(project: str) -> dict:
     related_projects = []
     if centroid:
         import numpy as np
-        from localknowledge.embeddings.dense import cosine_similarity, embedding_from_bytes
+        from localknowledge.embeddings.dense import cosine_similarity
 
         centroid_vec = np.array(centroid)
         all_centroids = svc.centroids.get_all_centroids()

@@ -3,7 +3,6 @@
 import numpy as np
 
 from localknowledge.db import Database
-from localknowledge.documents import DocumentStore
 from localknowledge.service import KnowledgeService
 from localknowledge.tags import TagStore
 
