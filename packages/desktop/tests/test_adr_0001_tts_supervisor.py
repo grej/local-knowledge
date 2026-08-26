@@ -10,6 +10,7 @@ import pytest
 from localknowledge.config import Config
 from localknowledge.tts import TTSModelStatus
 from lk_desktop import app as desktop_app
+from lk_desktop.config import DesktopConfig
 from lk_desktop.services import SERVICE_MAP
 from lk_desktop.supervisor import ProcessSupervisor, ServiceState
 
@@ -117,35 +118,210 @@ def test_health_tick_does_not_restart_tts_during_model_download(monkeypatch, tmp
     assert state.detail == "Downloading kokoro-82m (10%)"
 
 
-def test_desktop_prompts_before_a_required_model_download(monkeypatch) -> None:
-    alerts: list[dict[str, object]] = []
+def test_desktop_populates_menu_before_first_startup_timer(monkeypatch) -> None:
+    refreshes: list[object] = []
 
+    monkeypatch.setattr(desktop_app.rumps.App, "__init__", lambda self, *_args, **_kwargs: None)
+    monkeypatch.setattr(desktop_app.Config, "load", lambda: SimpleNamespace(base_dir=Path("/tmp/lk-test")))
+    monkeypatch.setattr(
+        desktop_app.DesktopConfig,
+        "load",
+        lambda _config: SimpleNamespace(auto_start_services=True, open_client_on_start=True),
+    )
+    monkeypatch.setattr(desktop_app, "ProcessSupervisor", lambda _base_dir: SimpleNamespace())
+    monkeypatch.setattr(
+        desktop_app.LKDesktopApp,
+        "_refresh_menu",
+        lambda self: refreshes.append(self),
+    )
+
+    app = desktop_app.LKDesktopApp()
+
+    assert refreshes == [app]
+
+
+def test_launchagent_auto_start_never_opens_a_modal_for_missing_model(monkeypatch) -> None:
     class DownloadSupervisor:
-        states = {"kokoro-edge": ServiceState()}
+        def __init__(self) -> None:
+            self.states = {"kokoro-edge": ServiceState()}
+            self.start_calls = 0
 
         def tts_model_status(self) -> TTSModelStatus:
             return TTSModelStatus("kokoro-82m", False, 0, 341_747_187)
 
+        def start_all(self) -> None:
+            self.start_calls += 1
+
+    supervisor = DownloadSupervisor()
     fake_app = SimpleNamespace(
-        supervisor=DownloadSupervisor(),
-        # A prior failed attempt must not suppress the prompt on retry.
-        _download_notice_shown=True,
+        supervisor=supervisor,
+        _service_start_pending=True,
+        _tts_model_status=None,
+        _pending_notification=None,
+    )
+    fake_app._mark_model_setup_required = lambda status: desktop_app.LKDesktopApp._mark_model_setup_required(
+        fake_app,
+        status,
     )
 
-    def alert(**kwargs):
-        alerts.append(kwargs)
-        return 1
+    monkeypatch.setattr(
+        desktop_app.rumps,
+        "alert",
+        lambda **_kwargs: pytest.fail("automatic LaunchAgent startup must never open a modal alert"),
+    )
 
-    monkeypatch.setattr(desktop_app.rumps, "alert", alert)
+    desktop_app.LKDesktopApp._run_auto_start(fake_app)
 
-    assert desktop_app.LKDesktopApp._confirm_model_download(fake_app) is True
-    assert fake_app._download_notice_shown is True
-    assert alerts[0]["title"] == "TTS Model Download Required"
-    assert alerts[0]["ok"] == "Download"
-    assert alerts[0]["cancel"] == "Not Now"
-    assert "341.7 MB" in alerts[0]["message"]
-    assert "progress" in alerts[0]["message"]
-    assert "SHA-256" in alerts[0]["message"]
+    state = supervisor.states["kokoro-edge"]
+    assert supervisor.start_calls == 0
+    assert state.status == "setup_required"
+    assert state.activity == "model_download_required"
+    assert state.detail == "Model download required (341.7 MB)"
+    assert fake_app._service_start_pending is False
+    assert fake_app._pending_notification == (
+        "TTS Model Download Required",
+        "Local Knowledge setup",
+        "Open the LK menu and choose Download TTS Model (341.7 MB).",
+    )
+
+
+def test_model_setup_notification_is_non_blocking(monkeypatch) -> None:
+    notifications: list[tuple[str, str, str]] = []
+    fake_app = SimpleNamespace(
+        _pending_notification=(
+            "TTS Model Download Required",
+            "Local Knowledge setup",
+            "Open the LK menu and choose Download TTS Model (341.7 MB).",
+        )
+    )
+
+    monkeypatch.setattr(desktop_app.rumps, "notification", lambda *args: notifications.append(args))
+
+    desktop_app.LKDesktopApp._dispatch_pending_notification(fake_app)
+
+    assert notifications == [
+        (
+            "TTS Model Download Required",
+            "Local Knowledge setup",
+            "Open the LK menu and choose Download TTS Model (341.7 MB).",
+        )
+    ]
+    assert fake_app._pending_notification is None
+
+
+def test_setup_required_menu_exposes_download_action(monkeypatch, tmp_path: Path) -> None:
+    class FakeMenuItem:
+        def __init__(self, title: str, callback=None) -> None:
+            self.title = title
+            self.callback = callback
+            self.state = False
+
+    class FakeMenu:
+        def __init__(self) -> None:
+            self.items: list[object] = []
+
+        def clear(self) -> None:
+            self.items.clear()
+
+        def add(self, item: object) -> None:
+            self.items.append(item)
+
+    states = {service.slug: ServiceState() for service in desktop_app.SERVICES}
+    states["kokoro-edge"].status = "setup_required"
+    states["kokoro-edge"].detail = "Model download required (341.7 MB)"
+
+    def noop(*_args) -> None:
+        return None
+
+    fake_app = SimpleNamespace(
+        supervisor=SimpleNamespace(states=states, logs_dir=tmp_path),
+        _doc_count=None,
+        _project_count=None,
+        _tts_model_status=TTSModelStatus("kokoro-82m", False, 0, 341_747_187),
+        _start_all=noop,
+        _stop_all=noop,
+        _open_logs=noop,
+        _toggle_login=noop,
+        _toggle_open_client_on_start=noop,
+        _quit=noop,
+        desktop_config=SimpleNamespace(open_client_on_start=True),
+        menu=FakeMenu(),
+    )
+
+    monkeypatch.setattr(desktop_app.rumps, "MenuItem", FakeMenuItem)
+    monkeypatch.setattr(desktop_app.rumps, "separator", "separator")
+    monkeypatch.setattr(desktop_app, "is_installed", lambda: False)
+
+    desktop_app.LKDesktopApp._refresh_menu(fake_app)
+
+    titles = [item.title for item in fake_app.menu.items if isinstance(item, FakeMenuItem)]
+    assert "\u25cb TTS Engine    Model download required (341.7 MB)" in titles
+    assert "Download TTS Model (341.7 MB)\u2026" in titles
+    assert "Start All Services" in titles
+    assert "Open Client on Startup" in titles
+
+
+def test_explicit_download_action_runs_existing_start_pipeline() -> None:
+    class DownloadSupervisor:
+        def __init__(self) -> None:
+            self.start_calls = 0
+
+        def start_all(self) -> None:
+            self.start_calls += 1
+
+    supervisor = DownloadSupervisor()
+    fake_app = SimpleNamespace(
+        supervisor=supervisor,
+        _service_start_pending=True,
+    )
+
+    desktop_app.LKDesktopApp._run_start_all(fake_app)
+
+    assert supervisor.start_calls == 1
+    assert fake_app._service_start_pending is False
+
+
+def test_desktop_config_opens_installed_client_on_start_by_default(tmp_path: Path) -> None:
+    config = Config.load(tmp_path / ".localknowledge")
+
+    desktop = DesktopConfig.load(config)
+
+    assert desktop.open_client_on_start is True
+    desktop.open_client_on_start = False
+    desktop.save(config)
+    assert DesktopConfig.load(config).open_client_on_start is False
+
+
+def test_native_client_opens_once_after_readcast_is_healthy(monkeypatch) -> None:
+    opened: list[bool] = []
+    readcast_state = ServiceState(status="starting")
+    fake_app = SimpleNamespace(
+        _client_open_pending=True,
+        supervisor=SimpleNamespace(states={"readcast": readcast_state}),
+    )
+
+    monkeypatch.setattr(desktop_app, "_open_native_client", lambda: opened.append(True) or True)
+
+    desktop_app.LKDesktopApp._open_client_if_ready(fake_app)
+    assert opened == []
+    assert fake_app._client_open_pending is True
+
+    readcast_state.status = "running"
+    desktop_app.LKDesktopApp._open_client_if_ready(fake_app)
+    desktop_app.LKDesktopApp._open_client_if_ready(fake_app)
+
+    assert opened == [True]
+    assert fake_app._client_open_pending is False
+
+
+def test_automatic_client_launch_has_no_browser_fallback(monkeypatch) -> None:
+    browsers: list[str] = []
+
+    monkeypatch.setattr(desktop_app, "_find_native_client", lambda: None)
+    monkeypatch.setattr(desktop_app.webbrowser, "open", lambda url: browsers.append(url))
+
+    assert desktop_app._open_native_client() is False
+    assert browsers == []
 
 
 def test_tts_probe_uses_shared_client_status_not_httpx_or_a_tcp_health_url(tmp_path: Path) -> None:
