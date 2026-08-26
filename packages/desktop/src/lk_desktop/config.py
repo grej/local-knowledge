@@ -12,6 +12,7 @@ SECTION = "desktop"
 DEFAULTS = {
     "start_on_login": False,
     "auto_start_services": True,
+    "open_client_on_start": True,
     "health_check_interval": 10,
 }
 
@@ -20,6 +21,7 @@ DEFAULTS = {
 class DesktopConfig:
     start_on_login: bool
     auto_start_services: bool
+    open_client_on_start: bool
     health_check_interval: int
 
     @classmethod
@@ -29,6 +31,7 @@ class DesktopConfig:
         return cls(
             start_on_login=bool(data["start_on_login"]),
             auto_start_services=bool(data["auto_start_services"]),
+            open_client_on_start=bool(data["open_client_on_start"]),
             health_check_interval=int(data["health_check_interval"]),
         )
 
@@ -37,5 +40,6 @@ class DesktopConfig:
         config.set_product_config(SECTION, {
             "start_on_login": self.start_on_login,
             "auto_start_services": self.auto_start_services,
+            "open_client_on_start": self.open_client_on_start,
             "health_check_interval": self.health_check_interval,
         })

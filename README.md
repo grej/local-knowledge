@@ -19,9 +19,19 @@ manage — just the commands.
 lk-desktop
 ```
 
-A menu bar icon appears. All services start automatically — click **Readcast** or
-**Knowledge Base** to open their web UIs in your browser. The menu bar shows health
-status for each service and auto-restarts anything that crashes.
+A menu bar icon appears. All services start automatically. On first run, the menu shows
+the required TTS model download and its progress without blocking the menu. Click
+**Readcast** or **Knowledge Base** to open their UIs. The menu bar shows health status
+for each service and auto-restarts anything that crashes.
+
+If the standalone **Local Knowledge.app** is installed, it opens after Readcast becomes
+healthy. This is enabled by default and can be changed with the menu's **Open Client on
+Startup** setting or in `~/.localknowledge/config.toml`:
+
+```toml
+[desktop]
+open_client_on_start = true
+```
 
 To start on login: click the menu bar icon → **Start on Login**.
 
