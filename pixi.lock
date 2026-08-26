@@ -1194,10 +1194,10 @@ packages:
 - pypi: ./packages/mcp
   name: lk-mcp
   version: 0.1.0
-  sha256: 7d3da50c59bf6f49f2bcd7818e0ea7a612caee63a609a41aa3442e46713a4719
+  sha256: 88ee718d929138d78a3cc4d967bf4f39e459d0d891ddb246f696e7ec0185e6d2
   requires_dist:
   - localknowledge-core
-  - mcp>=1.26
+  - mcp>=1.26,<2
   - click>=8.1
   requires_python: '>=3.12'
 - pypi: ./packages/ui

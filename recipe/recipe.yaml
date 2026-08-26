@@ -34,7 +34,7 @@ requirements:
     - rich >=13.0
     - fastapi >=0.115
     - uvicorn >=0.34
-    - mcp >=1.26
+    - mcp >=1.26,<2
     - rumps >=0.4.0
 
 tests:

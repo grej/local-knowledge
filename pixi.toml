@@ -15,7 +15,7 @@ macos = "15.0"
 [dependencies]
 python = "3.12.*"
 pip = "*"
-mcp = "*"
+mcp = ">=1.26,<2"
 httpx = "*"
 numpy = "*"
 click = ">=8.1"
