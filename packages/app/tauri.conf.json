@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/jsonschemas/main/tauri/tauri-conf-v2.json",
   "productName": "Local Knowledge",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "identifier": "com.localknowledge.app",
   "build": {
     "frontendDist": "http://127.0.0.1:8765"
@@ -14,7 +14,8 @@
         "width": 1200,
         "height": 800,
         "minWidth": 800,
-        "minHeight": 600
+        "minHeight": 600,
+        "incognito": true
       }
     ],
     "security": {}
