@@ -7,7 +7,9 @@ everything.
 ## Install
 
 ```bash
-pixi global install local-knowledge --channel gjennings --channel conda-forge
+pixi global install --environment local-knowledge \
+  --channel gjennings --channel conda-forge \
+  --pinning-strategy no-pin local-knowledge readcast
 ```
 
 This installs all commands into an isolated environment. No Python, no dependencies to
@@ -34,6 +36,19 @@ open_client_on_start = true
 ```
 
 To start on login: click the menu bar icon → **Start on Login**.
+
+## Upgrade
+
+Choose **Upgrade Local Knowledge…** from the LK menu, or run:
+
+```bash
+lk-desktop upgrade
+```
+
+The upgrade command stops only Local Knowledge processes from the installed Pixi
+environment, updates both Local Knowledge and Readcast, and then restores the previous
+LaunchAgent or manual desktop session. Configuration, databases, models, articles, and
+audio under `~/.localknowledge` and `~/.readcast` are not modified.
 
 ## What's included
 

@@ -288,6 +288,7 @@ def test_setup_required_menu_exposes_download_action(monkeypatch, tmp_path: Path
         _start_all=noop,
         _stop_all=noop,
         _open_logs=noop,
+        _upgrade=noop,
         _toggle_login=noop,
         _toggle_open_client_on_start=noop,
         _quit=noop,
@@ -305,6 +306,7 @@ def test_setup_required_menu_exposes_download_action(monkeypatch, tmp_path: Path
     assert "\u25cb TTS Engine    Model download required (341.7 MB)" in titles
     assert "Download TTS Model (341.7 MB)\u2026" in titles
     assert "Start All Services" in titles
+    assert "Upgrade Local Knowledge\u2026" in titles
     assert "Open Client on Startup" in titles
 
 
