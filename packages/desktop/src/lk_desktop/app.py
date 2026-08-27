@@ -20,6 +20,7 @@ from .config import DesktopConfig
 from .launchd import install as launchd_install, uninstall as launchd_uninstall, is_installed
 from .services import SERVICES
 from .supervisor import ProcessSupervisor
+from .updater import UpgradeError, open_upgrade_terminal, upgrade_installation
 
 STATUS_ICONS = {
     "running": "\u25cf",     # ● green (described in menu)
@@ -137,6 +138,7 @@ class LKDesktopApp(rumps.App):
         items.append(None)
 
         items.append(rumps.MenuItem("View Logs\u2026", callback=self._open_logs))
+        items.append(rumps.MenuItem("Upgrade Local Knowledge\u2026", callback=self._upgrade))
 
         login_item = rumps.MenuItem("Start on Login", callback=self._toggle_login)
         login_item.state = is_installed()
@@ -214,6 +216,12 @@ class LKDesktopApp(rumps.App):
     def _open_logs(self, _) -> None:
         _sp.run(["open", str(self.supervisor.logs_dir)])
 
+    def _upgrade(self, _) -> None:
+        try:
+            open_upgrade_terminal()
+        except UpgradeError as exc:
+            rumps.notification("Upgrade could not start", "Local Knowledge", str(exc))
+
     def _toggle_login(self, sender) -> None:
         if is_installed():
             launchd_uninstall()
@@ -279,6 +287,18 @@ def status():
         icon = STATUS_ICONS.get(state.status, "\u25cb")
         label = STATUS_LABELS.get(state.status, state.status)
         click.echo(f"  {icon} {svc.display_name:20s} {label}")
+
+
+@cli.command()
+def upgrade():
+    """Upgrade Local Knowledge and Readcast in their Pixi global environment."""
+    click.echo("Upgrading Local Knowledge and Readcast...")
+    try:
+        result = upgrade_installation()
+    except UpgradeError as exc:
+        raise click.ClickException(str(exc)) from exc
+    suffix = " Services restarted." if result.restarted else ""
+    click.echo(f"Upgrade complete for Pixi environment {result.environment!r}.{suffix}")
 
 
 _LK_APP_BUNDLE = "com.localknowledge.app"
