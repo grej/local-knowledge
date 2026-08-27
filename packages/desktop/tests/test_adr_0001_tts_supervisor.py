@@ -13,7 +13,7 @@ from localknowledge.tts import TTSModelStatus
 from lk_desktop import app as desktop_app
 from lk_desktop.config import DesktopConfig
 from lk_desktop.services import SERVICE_MAP
-from lk_desktop.supervisor import ProcessSupervisor, ServiceState
+from lk_desktop.supervisor import ProcessSupervisor, ServiceState, TTS_BUSY_GRACE_SECS
 
 
 class FakeRuntime:
@@ -117,6 +117,36 @@ def test_health_tick_does_not_restart_tts_during_model_download(monkeypatch, tmp
     assert runtime.stop_calls == 0
     assert state.status == "starting"
     assert state.detail == "Downloading kokoro-82m (10%)"
+
+
+def test_health_tick_does_not_restart_busy_tts_until_timeout_grace_expires(monkeypatch, tmp_path: Path) -> None:
+    class BusyClient(FakeClient):
+        def server_status(self) -> dict[str, object]:
+            self.status_calls += 1
+            raise RuntimeError("TTS request timed out at unix:/tmp/kokoro-edge.sock")
+
+    now = [100.0]
+    monkeypatch.setattr("lk_desktop.supervisor.time.monotonic", lambda: now[0])
+    runtime = FakeRuntime()
+    client = BusyClient()
+    supervisor = _supervisor(tmp_path / ".localknowledge", runtime, client)
+    state = supervisor.states["kokoro-edge"]
+    state.status = "running"
+    state.last_restart = 0
+
+    supervisor.check_health()
+
+    assert state.status == "running"
+    assert state.unresponsive_since == 100.0
+    assert runtime.stop_calls == 0
+    assert runtime.ensure_calls == 0
+
+    now[0] += TTS_BUSY_GRACE_SECS + 1
+    supervisor.check_health()
+
+    assert state.restart_count == 1
+    assert runtime.stop_calls == 1
+    assert runtime.ensure_calls == 1
 
 
 def test_health_discovery_marks_already_running_services_healthy(monkeypatch, tmp_path: Path) -> None:
