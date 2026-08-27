@@ -3,7 +3,7 @@
 use std::sync::Mutex;
 
 use tauri::{
-    menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     Manager,
 };
 
@@ -18,19 +18,21 @@ fn main() {
     tauri::Builder::default()
         .manage(ZoomState(Mutex::new(DEFAULT_ZOOM)))
         .menu(|app| {
-            let actual_size =
-                MenuItem::with_id(app, "actual_size", "Actual Size", true, Some("CmdOrCtrl+0"))?;
             let zoom_in = MenuItem::with_id(app, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+="))?;
             let zoom_out =
                 MenuItem::with_id(app, "zoom_out", "Zoom Out", true, Some("CmdOrCtrl+-"))?;
+            let actual_size =
+                MenuItem::with_id(app, "actual_size", "Actual Size", true, Some("CmdOrCtrl+0"))?;
             let separator = PredefinedMenuItem::separator(app)?;
-            let view = Submenu::with_items(
-                app,
-                "View",
-                true,
-                &[&actual_size, &separator, &zoom_in, &zoom_out],
-            )?;
-            Menu::with_items(app, &[&view])
+            let menu = Menu::default(app)?;
+            let view = menu
+                .items()?
+                .into_iter()
+                .filter_map(|item| item.as_submenu().cloned())
+                .find(|submenu| submenu.text().is_ok_and(|text| text == "View"))
+                .expect("Tauri's default macOS menu must contain View");
+            view.prepend_items(&[&zoom_in, &zoom_out, &actual_size, &separator])?;
+            Ok(menu)
         })
         .on_menu_event(|app, event| {
             let action = if event.id() == "actual_size" {
