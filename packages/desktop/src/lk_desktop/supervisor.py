@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 BACKOFF_DELAYS = [5, 10, 30, 60, 120]
 MAX_RESTARTS = len(BACKOFF_DELAYS)
 HEALTHY_RESET_SECS = 300  # reset restart counter after 5 min healthy
+TTS_BUSY_GRACE_SECS = 150  # synthesis requests can occupy the status endpoint for up to 120s
 LOG_MAX_BYTES = 1_000_000
 
 
@@ -33,6 +34,7 @@ class ServiceState:
     restart_count: int = 0
     last_restart: float | None = None
     healthy_since: float | None = None
+    unresponsive_since: float | None = None
 
 
 class ProcessSupervisor:
@@ -158,6 +160,7 @@ class ProcessSupervisor:
         state.activity = None
         state.detail = None
         state.healthy_since = None
+        state.unresponsive_since = None
         log.info("%s: stopped", svc.slug)
 
     # ── Health checks ───────────────────────────────────────────────
@@ -188,8 +191,18 @@ class ProcessSupervisor:
         if svc.slug == "kokoro-edge":
             try:
                 self.tts_client.server_status()
+                self.states[svc.slug].unresponsive_since = None
                 return True
-            except Exception:
+            except Exception as exc:
+                state = self.states[svc.slug]
+                if _is_timeout_error(exc):
+                    now = time.monotonic()
+                    if state.unresponsive_since is None:
+                        state.unresponsive_since = now
+                    if now - state.unresponsive_since < TTS_BUSY_GRACE_SECS:
+                        log.debug("%s: status probe timed out while engine may be busy", svc.slug)
+                        return True
+                state.unresponsive_since = None
                 return False
         if not svc.health_url:
             # No health URL — check process is alive
@@ -242,3 +255,8 @@ class ProcessSupervisor:
         log_file = self.logs_dir / f"{slug}.log"
         if log_file.exists() and log_file.stat().st_size > LOG_MAX_BYTES:
             log_file.write_text("")
+
+
+def _is_timeout_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "timed out" in message or "timeout" in message
